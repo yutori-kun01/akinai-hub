@@ -22,3 +22,9 @@ test('A/B winner by open or click rate, tie keeps A; buckets are stable',()=>{
  assert.equal(abWinner(s,'open'),'B');assert.equal(abWinner(s,'click'),'A');assert.equal(abWinner([{variant:'A',sent:4,opened:2,clicked:0},{variant:'B',sent:2,opened:1,clicked:0}],'open'),'A');
  assert.equal(abBucket('x'),abBucket('x'));assert.ok(abBucket('y')>=0&&abBucket('y')<100);
 });
+import {withOption,lineup,priceOf as price2} from '../lib/pricing.ts';
+test('price options override price and billing; lineup lists the base first',()=>{
+ const p={name:'X',price:30000,billing:'one_time',options:[{id:'six',label:'6回',price:36000,billing:'installments',interval:'month',installmentCount:6,trialDays:0}]};
+ const v=withOption(p,'six');assert.equal(price2(v).amount,6000);assert.equal(v.optionLabel,'6回');assert.equal(withOption(p,''),p);assert.throws(()=>withOption(p,'x'));
+ assert.deepEqual(lineup(p).map((o:any)=>[o.id,o.label]),[['','通常価格'],['six','6回']]);
+});

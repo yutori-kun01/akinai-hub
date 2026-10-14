@@ -1,0 +1,11 @@
+'use client';
+import {Plus} from 'lucide-react';
+type Item=Record<string,any>;
+// Extra price options for one product (UTAGE's 価格ラインナップ). Buyers pick one on the sales page.
+export default function PriceOptions({data,field}:{data:Item;field:(k:string,v:unknown)=>void}){const list:Item[]=data.options||[];const set=(i:number,c:Item)=>field('options',list.map((o,j)=>j===i?{...o,...c}:o));
+ return <fieldset><legend>価格の選択肢（任意）</legend><label>上の価格の名前<input maxLength={40} placeholder="通常価格" value={data.priceLabel||''} onChange={e=>field('priceLabel',e.target.value)}/></label>
+  {list.map((o,i)=><div key={o.id} className="price-option"><div className="field-row"><label>名前<input required maxLength={40} value={o.label} placeholder="6回払い" onChange={e=>set(i,{label:e.target.value})}/></label><label>価格（税込・総額）<input type="number" min="0" value={o.price} onChange={e=>set(i,{price:Number(e.target.value)})}/></label></div>
+   <div className="field-row"><label>支払い方法<select value={o.billing} onChange={e=>set(i,{billing:e.target.value})}><option value="one_time">一括払い</option><option value="subscription">継続課金</option><option value="installments">分割払い</option></select></label>{o.billing==='subscription'&&<label>請求間隔<select value={o.interval} onChange={e=>set(i,{interval:e.target.value})}><option value="month">毎月</option><option value="year">毎年</option></select></label>}{o.billing==='installments'&&<label>支払回数<input type="number" min="2" max="60" value={o.installmentCount} onChange={e=>set(i,{installmentCount:Number(e.target.value)})}/></label>}{o.billing==='subscription'&&<label>無料お試し（日）<input type="number" min="0" max="365" value={o.trialDays} onChange={e=>set(i,{trialDays:Number(e.target.value)})}/></label>}</div>
+   <button type="button" className="text-btn" onClick={()=>field('options',list.filter((_,j)=>j!==i))}>この選択肢を削除</button></div>)}
+  {list.length<6&&<button type="button" className="secondary compact" onClick={()=>field('options',[...list,{id:Math.random().toString(36).slice(2,10),label:'',price:data.price||0,billing:'installments',interval:'month',installmentCount:3,trialDays:0}])}><Plus size={14}/>価格の選択肢を追加</button>}
+  <small className="subtle">販売ページで購入者が選べます（例：一括 / 6回払い / 月額）。注文には選んだ名前が付きます。クーポンは選んだ価格に適用されます。</small></fieldset>;}

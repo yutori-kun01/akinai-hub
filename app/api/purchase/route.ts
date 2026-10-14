@@ -4,19 +4,20 @@ import {z} from 'zod';
 import {db,cfg,list,get,save,makeOrder,input,response,fail} from '@/lib/server';
 import {parseJapanDate} from '@/lib/core';
 import {checkout,findCoupon,priceOf} from '@/lib/billing';
+import {withOption} from '@/lib/pricing';
 import {recordConversion,attribution} from '@/lib/analytics';
 import {visitorFrom} from '@/lib/ab';
 import {partnerFor} from '@/lib/partners';
 import {formValues} from '@/lib/page-schema';
-const schema=z.object({owner:z.string().min(1).max(150),pageId:z.string().uuid(),method:z.enum(['bank','card']),consent:z.boolean(),terms:z.literal(true),key:z.string().uuid(),coupon:z.string().trim().max(40).default(''),bump:z.boolean().default(false),fields:z.record(z.unknown()).default({})});
+const schema=z.object({owner:z.string().min(1).max(150),pageId:z.string().uuid(),method:z.enum(['bank','card']),consent:z.boolean(),terms:z.literal(true),key:z.string().uuid(),coupon:z.string().trim().max(40).default(''),bump:z.boolean().default(false),fields:z.record(z.unknown()).default({}),optionId:z.string().max(20).default('')});
 async function attach(owner:string,order:any,buyer:string,extra:Record<string,unknown>){if(order.buyer&&order.buyer!==buyer)throw Error('注文の所有者が異なります');if(order.buyer)return order;const {id,kind,version,created,updated,...data}=order;Object.assign(data,{buyer,...extra});const r=await db().prepare('UPDATE records SET data=?,updated=?,version=version+1 WHERE owner=? AND id=? AND version=?').bind(JSON.stringify(data),Date.now(),owner,id,version).run();if(!r.meta.changes)throw Error('注文が更新されました。もう一度お試しください');return get(owner,id);}
 export async function POST(req:Request){try{const user=await customerOf(req);const buyer=user.userId;if(cfg().COMMERCE_ENABLED!=='true')throw Error('販売開始の準備中です');const b=schema.parse(await input(req));if(standalone()&&b.owner!==workspace())throw Error('店舗がありません');const all=await list(b.owner);const page=all.find(p=>p.id===b.pageId&&p.kind==='pages'&&p.status==='published');if(!page||(page.pageType&&page.pageType!=='sales'))throw Error('受付中のページがありません');const settings=all.find(p=>p.kind==='settings');if(!settings?.legalText||!settings?.privacyText)throw Error('販売条件の準備中です');if(page.deadline&&(!Number.isFinite(parseJapanDate(page.deadline))||parseJapanDate(page.deadline)<Date.now()))throw Error('受付期限を過ぎています');
  const values=formValues(page.formFields||[],b.fields);
- const product=all.find(p=>p.id===page.productId&&p.kind==='products');if(!product)throw Error('有効な商品がありません');
+ const base=all.find(p=>p.id===page.productId&&p.kind==='products');if(!base)throw Error('有効な商品がありません');const product=withOption(base,b.optionId);
  const email=z.string().email().parse(user.email).toLowerCase();let contact=all.find(c=>c.kind==='contacts'&&c.email===email);if(!contact)contact=await save(b.owner,'contacts',{name:email,email,tags:[],consent:b.consent,status:'subscribed',source:'purchase',fields:values});else if(Object.keys(values).length){try{contact=await save(b.owner,'contacts',{...contact,fields:{...(contact.fields||{}),...values}},contact.id,contact.version);}catch{}}
  // Pricing is decided here, never by the browser: coupon discount on the main product, split for installments.
  const coupon=b.coupon?await findCoupon(b.owner,b.coupon,product.id):null;const price=priceOf(product,coupon);const free=price.total===0&&product.billing==='one_time';
- const method=free?'free':b.method;const extra={amount:price.amount,listPrice:price.listPrice,discount:price.discount,...(coupon?{couponId:coupon.id,couponCode:coupon.code}:{}),...(price.installments?{installments:price.installments,paidCount:0}:{}),...(product.trialDays&&product.billing==='subscription'?{trialDays:product.trialDays}:{})};
+ const method=free?'free':b.method;const extra={billing:product.billing||'one_time',...(product.optionId?{optionId:product.optionId,productName:`${product.name}（${product.optionLabel}）`,interval:product.interval}:{}),amount:price.amount,listPrice:price.listPrice,discount:price.discount,...(coupon?{couponId:coupon.id,couponCode:coupon.code}:{}),...(price.installments?{installments:price.installments,paidCount:0}:{}),...(product.trialDays&&product.billing==='subscription'?{trialDays:product.trialDays}:{})};
  const partner=await partnerFor(b.owner,req.headers.get('cookie'),email);if(partner&&!free)Object.assign(extra,{partnerId:partner.id});
  const fresh=!(await get(b.owner,b.key));let order=await makeOrder(b.owner,product.id,contact.id,method,b.key,extra);
  // Funnel attribution: which page variant and route led to this order (first request for this key only).
