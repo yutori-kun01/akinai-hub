@@ -1,6 +1,6 @@
 'use client';
 import {useState,type ReactNode} from 'react';
-import {ArrowUp,ArrowDown,Copy,Trash2,Monitor,Smartphone,Settings2,Search,Plus,X as Close,Heading1,Heading2,Pilcrow,ListChecks,CircleHelp,Table,Image,PanelLeft,Play,Music,MessageCircle,FileText,RectangleHorizontal,SquarePen,Timer,ChartNoAxesColumn,Minus,MoveVertical,Code,Radio,type LucideIcon} from 'lucide-react';
+import {ArrowUp,ArrowDown,Copy,Trash2,Monitor,Smartphone,Settings2,Search,Plus,X as Close,Heading1,Heading2,Pilcrow,ListChecks,CircleHelp,Table,Image,PanelLeft,Play,Music,MessageCircle,FileText,RectangleHorizontal,SquarePen,Timer,ChartNoAxesColumn,Minus,MoveVertical,Code,Radio,Rows3,ListVideo,type LucideIcon} from 'lucide-react';
 import PageBlocks from './page-blocks';
 import BlockFields,{blockLabels,type FieldSection} from './block-fields';
 import {blockSchema} from '@/lib/page-schema';
@@ -8,13 +8,13 @@ import type {PageBlock,FormField} from '@/lib/page-schema';
 const fieldTypeLabels:Record<FormField['type'],string>={text:'1行テキスト',textarea:'複数行テキスト',tel:'電話番号',postal:'郵便番号',address:'住所',date:'日付',select:'選択式',checkbox:'チェック（はい）'};
 type Item=Record<string,any>;
 const blank=(type:PageBlock['type'],text='',extra:Partial<PageBlock>={}):PageBlock=>blockSchema.parse({id:crypto.randomUUID(),type,text,url:type==='button'?'#registration':'',...extra});
-const starter:Partial<Record<PageBlock['type'],string>>={heading:'新しい見出し',subheading:'サブ見出し',button:'申し込む',bullets:'項目1\n項目2\n項目3',accordion:'よくある質問\n回答を書きます',table:'項目|内容\n期間|3か月',balloon:'吹き出しの文章',imageText:'画像の横に置く文章',progress:'募集枠の残り'};
+const starter:Partial<Record<PageBlock['type'],string>>={videoMenu:'第1話 はじめに|https://youtu.be/xxxxxxxxxxx|\n第2話 実践編|https://youtu.be/xxxxxxxxxxx|+1\n第3話 まとめ|https://youtu.be/xxxxxxxxxxx|+2',heading:'新しい見出し',subheading:'サブ見出し',button:'申し込む',bullets:'項目1\n項目2\n項目3',accordion:'よくある質問\n回答を書きます',table:'項目|内容\n期間|3か月',balloon:'吹き出しの文章',imageText:'画像の横に置く文章',progress:'募集枠の残り'};
 // Element palette grouped like UTAGE's element picker.
 const groups:{name:string;types:[PageBlock['type'],LucideIcon][]}[]=[
  {name:'文章',types:[['heading',Heading1],['subheading',Heading2],['text',Pilcrow],['bullets',ListChecks],['accordion',CircleHelp],['table',Table]]},
- {name:'メディア',types:[['image',Image],['imageText',PanelLeft],['video',Play],['webinar',Radio],['audio',Music],['balloon',MessageCircle],['pdf',FileText]]},
+ {name:'メディア',types:[['image',Image],['imageText',PanelLeft],['video',Play],['webinar',Radio],['videoMenu',ListVideo],['audio',Music],['balloon',MessageCircle],['pdf',FileText]]},
  {name:'販売・登録',types:[['button',RectangleHorizontal],['form',SquarePen],['countdown',Timer],['progress',ChartNoAxesColumn]]},
- {name:'レイアウト',types:[['divider',Minus],['spacer',MoveVertical],['html',Code]]},
+ {name:'レイアウト',types:[['section',Rows3],['divider',Minus],['spacer',MoveVertical],['html',Code]]},
 ];
 // Section snippets: a few blocks that belong together, inserted at once (UTAGE users build pages from these patterns).
 const sections:{name:string;blocks:()=>PageBlock[]}[]=[

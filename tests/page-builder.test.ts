@@ -42,3 +42,12 @@ test('auto-webinar finds the live slot (also across midnight) or the next start'
  assert.equal(webinarSlot('',60,Date.now()),null);
  assert.throws(()=>newBlockSchema.parse({id:'w',type:'webinar',times:'25:00'}));
 });
+import {parseVideoMenu,episodeOpen} from '../lib/page-schema.ts';
+test('video menu episodes open now, on a date, or N days after the first visit',()=>{
+ const m=parseVideoMenu('第1話|https://youtu.be/aaaaaaaaaaa|\n第2話|https://youtu.be/bbbbbbbbbbb|2026-11-01\n第3話|https://youtu.be/ccccccccccc|+3');
+ assert.deepEqual(m.map(e=>[e.title,e.date!==null,e.days]),[['第1話',false,null],['第2話',true,null],['第3話',false,3]]);
+ const first=Date.parse('2026-10-20T10:00:00+09:00');
+ assert.equal(episodeOpen(m[0],first,first),true);assert.equal(episodeOpen(m[1],first,Date.parse('2026-10-31T23:59:00+09:00')),false);assert.equal(episodeOpen(m[1],first,Date.parse('2026-11-01T00:00:00+09:00')),true);
+ assert.equal(episodeOpen(m[2],first,first+3*86400000-1),false);assert.equal(episodeOpen(m[2],first,first+3*86400000),true);
+ assert.equal(newBlockSchema.parse({id:'s',type:'section',width:'third'}).width,'third');
+});
