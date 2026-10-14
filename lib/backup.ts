@@ -4,7 +4,7 @@ import {schemas,kinds} from './core';
 import {z} from 'zod';
 import {digest} from './auth';
 import {imageKey} from './page-schema';
-const order=z.object({productId:z.string(),contactId:z.string(),productName:z.string(),amount:z.number().int().nonnegative(),method:z.enum(['bank','card']),status:z.enum(['pending_bank','pending_card','paid','cancelled','revoked']),sessionId:z.string().nullable().optional(),buyer:z.string().optional(),pageId:z.string().optional(),termsVersion:z.number().optional()});
+const order=z.object({productId:z.string(),contactId:z.string(),productName:z.string(),amount:z.number().int().nonnegative(),method:z.enum(['bank','card','free']),status:z.enum(['pending_bank','pending_card','paid','cancelled','revoked']),sessionId:z.string().nullable().optional(),buyer:z.string().optional(),pageId:z.string().optional(),termsVersion:z.number().optional()});
 const row=z.object({id:z.string().min(1).max(200),owner:z.string(),kind:z.string(),data:z.string(),version:z.number().int().positive(),created:z.number(),updated:z.number()});
 const job=z.object({id:z.string().min(1).max(500),owner:z.string(),contact_id:z.string(),campaign_id:z.string(),subject:z.string(),body:z.string(),category:z.enum(['marketing','transactional']),due:z.number(),status:z.enum(['queued','sending','sent','suppressed','failed','cancelled']),attempts:z.number().int().nonnegative(),error:z.string().nullable(),provider:z.string().nullable(),provider_id:z.string().nullable(),html:z.string().nullable().optional(),created:z.number()});
 const mailEvent=z.object({id:z.string().min(1).max(200),owner:z.string(),job_id:z.string(),contact_id:z.string(),campaign_id:z.string(),type:z.enum(['open','click']),url:z.string().nullable(),created:z.number()});

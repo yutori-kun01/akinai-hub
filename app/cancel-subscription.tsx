@@ -1,0 +1,3 @@
+'use client';
+import {useState} from 'react';
+export default function CancelSubscription({orderId}:{orderId:string}){const [busy,B]=useState(false),[done,D]=useState(false),[error,E]=useState('');if(done)return <p role="status">解約を受け付けました。現在の期間の終わりまでご利用いただけます。</p>;return <><button className="secondary" disabled={busy} onClick={async()=>{if(!window.confirm('次回以降の請求を止めて解約しますか？現在の期間の終わりまではご利用いただけます。'))return;B(true);E('');try{const r=await fetch('/api/purchase/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:orderId})});const d=await r.json() as {error?:string};if(!r.ok)throw Error(d.error);D(true);}catch(e){E(e instanceof Error?e.message:String(e));B(false);}}}>解約する</button>{error&&<p role="alert">{error}</p>}</>;}

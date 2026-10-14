@@ -1,0 +1,6 @@
+import {customerOf} from '@/lib/auth';
+import {db,input,response,fail,auditStatement,type Row,unpack} from '@/lib/server';
+import {cancelSubscription} from '@/lib/billing';
+// Buyer-initiated cancellation of a subscription: stops renewal at the end of the paid period. Access ends when Stripe
+// reports the subscription deleted. Installment plans cannot be cancelled here (the buyer agreed to the full count).
+export async function POST(req:Request){try{const u=await customerOf(req);const b=await input(req);const row=await db().prepare("SELECT * FROM records WHERE id=? AND kind='orders' AND json_extract(data,'$.buyer')=?").bind(String(b.id||''),u.userId).first<Row>();if(!row)throw Error('注文がありません');const o=unpack(row);if(o.billing!=='subscription'||o.status!=='paid'||!o.subscriptionId)throw Error('解約できる継続課金ではありません');if(o.cancelAtPeriodEnd)return response({ok:true});await cancelSubscription(o.subscriptionId,true);const {id,kind,version,created,updated,...data}=o;data.cancelAtPeriodEnd=true;await db().prepare('UPDATE records SET data=?,version=version+1,updated=? WHERE owner=? AND id=?').bind(JSON.stringify(data),Date.now(),row.owner,id).run();await auditStatement(row.owner,'subscription:cancel-requested',id).run();return response({ok:true});}catch(e){return fail(e);}}
