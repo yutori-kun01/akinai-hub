@@ -63,3 +63,18 @@ records の新しい種類：`richMenus` `lineAutoReplies` `events` `bookings` `
 DB追加SQLなし（records のJSON項目追加のみ、既定値つき）。検証：型検査、単体64、統合96、ブラウザQA 30 すべて成功（外部はモック。Zoom・LINE・メール・Stripeの実接続は未確認）。
 
 まだ無いもの：1商品に複数価格、Stripe以外の決済代行、LINEログイン連携、行のネスト・自由配置、配信基準のカウントダウン、イベントのカレンダーAPI連携・キャンセル待ち、パートナーの案件・グループ管理、ページ内へのイベント予約フォーム埋め込み。
+
+## 第4回（「どんどん進めて」）
+
+| 内容 | 主なファイル |
+| --- | --- |
+| 価格の選択肢（1商品に一括・分割・継続課金など最大7通り、販売ページでプラン選択） | lib/pricing.ts、app/price-options.tsx |
+| イベントのキャンセル待ち（自動繰り上げ）、Googleカレンダー自動登録（サービスアカウント）、ページ内のイベント予約フォーム | lib/events.ts、lib/gcal.ts、app/api/events/info |
+| パートナーグループ | lib/partners.ts、app/partner-panel.tsx |
+| LINEログインでのワンタップ連携 | lib/line-login.ts、app/api/line/login |
+| 指定した配信の到着時刻からのカウントダウン | app/shop/[owner]/[slug]/page.tsx |
+| 読者登録・イベント予約/キャンセルの署名Webhook | lib/webhooks.ts |
+
+DB追加SQLなし。検証：型検査、単体65、統合101、ブラウザQA 31（外部はモック。Google・LINEログイン・Zoomの実接続は未確認）。
+
+まだ無いもの：Stripe以外の決済代行（どの会社を使うかの決定が必要）、行の入れ子・自由配置、Google Meetの自動発行。

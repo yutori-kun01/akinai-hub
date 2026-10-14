@@ -53,6 +53,7 @@ Vinext 1.0.0-beta.5 / React 19 / TypeScript / Vite 8 / Cloudflare Workers + D1 +
 - DB追加：drizzle/0009（line_messages・jobs.payload）、0010（conversions.target）。
 - 検証：型検査、単体58、統合91、ブラウザQA 29。外部は全てモック。
 - 続き：セクション/1/3・2/3列、画像・アイコンボタン、本文書式、動画メニュー、ウェビナー連動表示、コメント（承認制）、画像ライブラリ、メールA/B勝ち自動配信、本文の出し分け・{{field:}}、クリックでタグ解除、登録基準カウントダウン、Zoom会議自動作成（ZOOM_*）、パートナー商品別・2段報酬、ファネルJSON入出力、LINE動画/音声。単体64・統合96・ブラウザQA 30。
+- 第4回：価格の選択肢（1商品最大7通り）、イベントのキャンセル待ち・Googleカレンダー自動登録（GOOGLE_*）・ページ内予約フォーム、パートナーグループ、LINEログイン連携（LINE_LOGIN_*）、配信基準カウントダウン、読者登録/予約の署名Webhook。単体65・統合101・ブラウザQA 31。
 
 ## 2026-10-14 Claude 第2回（rc.3、docs/CHANGES-2026-10-14-claude-2.md）
 
@@ -81,14 +82,14 @@ Vinext 1.0.0-beta.5 / React 19 / TypeScript / Vite 8 / Cloudflare Workers + D1 +
 2. 独立Cloudflare環境で新規セットアップを通す。メール実到達、Stripeテストモード、LINE実アカウントでWebhook/配信/ブロックを確認。キーは安全な経路でユーザーが設定し、架空の接続完了を報告しない。
 3. ~~暖簾ロゴのベクター化と適用~~ → 2026-10-14に適用済み。ユーザーによる形の確認、文字のアウトライン化とデザイナーによる最終調整が残り。
 4. ~~ページビルダーの操作性拡張~~ → テンプレート・画像アップロード・複製・ドラッグ・ブロック単位の端末別表示は2026-10-14に実装済み。残りは端末別の細部スタイル、アップロード画像の一覧・削除UI。
-5. 残るUTAGE機能：1商品に複数価格、Stripe以外の決済代行、LINEログイン連携、行のネスト・自由配置、配信基準のカウントダウン、イベントのカレンダーAPI連携・キャンセル待ち、パートナーの案件・グループ管理（CHANGES-claude-3末尾）。LINE・Zoomの実アカウントでの確認。
+5. 残るUTAGE機能：Stripe以外の決済代行（会社の決定待ち）、行のネスト・自由配置、Google Meet自動発行。LINE・LINEログイン・Zoom・Googleカレンダーの実アカウントでの確認。
 6. UTAGEの原本保全→件数/ハッシュ/対応表→変換可能性の検証。HTMLメールや固定時刻ステップ、差し込み、複雑な分岐を黙ってテキスト・時間差へ劣化変換しない。
 7. 買い切り販売条件（価格・返金・設置先数・更新期間の既定値・譲渡可否）とライセンス条項をユーザーと確定。Tips購入者へは「ライセンスを手動発行」で受け渡す運用（docs/LICENSE-UPDATES.md）。サポートは「ほぼなし」の方針を販売ページと規約に明記。
 
 ## 重要な制約
 
 - 「UTAGE完全互換」「完成品」「本番検証済み」とは呼ばない。rc.2はリリース候補。
-- LINEは1公式アカウント。テキスト/画像/ボタン/カルーセル/スタンプ/Flex、リッチメニュー、自動応答、個別チャットあり（実アカウント未確認）。購入条件には顧客連携が必要。既存友だち全件取得、LINE Login/LIFFワンタップ連携、受信メディア本体の保存はない。返信は応答トークン（無料）優先、期限切れはプッシュ（通数消費）。
+- LINEは1公式アカウント。テキスト/画像/ボタン/カルーセル/スタンプ/Flex、リッチメニュー、自動応答、個別チャットあり（実アカウント未確認）。購入条件には顧客連携が必要。LINEログイン連携あり（同一プロバイダー必須、実アカウント未確認）。既存友だち全件取得、LIFF、受信メディア本体の保存はない。返信は応答トークン（無料）優先、期限切れはプッシュ（通数消費）。
 - ブロック式ページ編集（セクションの帯＋1/2・1/3・2/3列）。自由配置・行のネストは未実装。A/B、HTMLメール、開封クリック条件、人ごとのカウントダウン、サブスク・分割、フォーム追加項目、ポップアップ、イベント予約、パートナーは実装済み（実接続未確認）。
 - イベントの席は system_state の席キーで排他。予約のある日程の日時変更・削除は禁止。復元時は予約から席を再構築。パートナー報酬は承認で確定し、承認後の返金は差し引かない。
 - キュー作成後の本文・日時・ステップ・チャネル変更は禁止し、別の配信として作成。状態・条件は更新可。失敗や結果不明の送信を勝手に再送しない。
@@ -102,7 +103,7 @@ Vinext 1.0.0-beta.5 / React 19 / TypeScript / Vite 8 / Cloudflare Workers + D1 +
 
 ## 検証状況
 
-2026-10-14 第3回の続き時点：型検査、単体64、独立版統合96、ブラウザQA 30（Chromium・外部モック）。第3回時点：単体58、統合91、ブラウザQA 29。第2回（rc.3）時点：単体48、統合80、ブラウザQA 25。greed-learningは型検査・vitest 146・lint・build。第1回時点：単体27、統合43、ブラウザQA 21。frozen installはクリーン状態から成功。以下はrc.2基準版の記録。基準版は型検査・独立版/Sites版ビルド成功。単体24、独立版統合40、Sites版統合21の合計85項目。外部APIは全てモック。rc.2 ZIPのCRC/SHA-256照合済み。rc.2の新規オンライン依存インストールと購入者実機導入は未検証。
+2026-10-14 第4回時点：型検査、単体65、独立版統合101、ブラウザQA 31（Chromium・外部モック）。第3回の続き時点：単体64、統合96、ブラウザQA 30。第3回時点：単体58、統合91、ブラウザQA 29。第2回（rc.3）時点：単体48、統合80、ブラウザQA 25。greed-learningは型検査・vitest 146・lint・build。第1回時点：単体27、統合43、ブラウザQA 21。frozen installはクリーン状態から成功。以下はrc.2基準版の記録。基準版は型検査・独立版/Sites版ビルド成功。単体24、独立版統合40、Sites版統合21の合計85項目。外部APIは全てモック。rc.2 ZIPのCRC/SHA-256照合済み。rc.2の新規オンライン依存インストールと購入者実機導入は未検証。
 
 ## 並行開発
 
@@ -122,5 +123,6 @@ lib/mail-html.ts・tracking.ts:HTMLメールと計測 / lib/billing.ts・pricing
 app/integrations-panel.tsx・mail-editor.tsx・analytics-panel.tsx・block-fields.tsx:管理UI追加分
 lib/line-messages.ts・line-richmenu.ts・app/line-panel.tsx:LINE拡張 / app/funnel-map.tsx・lib/funnel-map.ts:ファネル図
 lib/rules.ts・app/rule-editor.tsx:配信条件AND/OR / lib/notify.ts:運営のお知らせ / app/form-fields.tsx:フォーム追加項目
-lib/events.ts・zoom.ts・app/events・app/event-editor.tsx・event-booking.tsx:イベント予約 / app/api/comments・comment-panel.tsx:コメント / app/api/assets/library・image-library.tsx:画像ライブラリ / lib/partners.ts・app/partner・app/partner-panel.tsx:パートナー
+lib/events.ts・zoom.ts・gcal.ts・app/events・app/event-editor.tsx・event-booking.tsx:イベント予約 / app/api/comments・comment-panel.tsx:コメント / app/api/assets/library・image-library.tsx:画像ライブラリ / lib/partners.ts・app/partner・app/partner-panel.tsx:パートナー
+lib/pricing.ts・app/price-options.tsx:価格の選択肢 / lib/line-login.ts・app/api/line/login:LINEログイン連携
 HANDOFF-INVENTORY.sha256.json:この一式の全ファイルハッシュ
