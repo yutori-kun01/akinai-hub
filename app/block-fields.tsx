@@ -1,4 +1,6 @@
 'use client';
+import {useState} from 'react';
+import ImageLibrary from './image-library';
 import type {PageBlock} from '@/lib/page-schema';
 // Settings for one page block, split into the inspector's 内容/デザイン/表示 tabs. Common fields keep their original
 // labels (browser QA relies on them); element-specific fields follow UTAGE's page elements.
@@ -7,6 +9,7 @@ export const blockLabels:Record<PageBlock['type'],string>={heading:'見出し',s
 const textHelp:Partial<Record<PageBlock['type'],string>>={videoMenu:'1行に「タイトル|動画URL|公開」。公開は空欄（すぐ）、2026-11-01（日付）、+3（初回表示の3日後）',bullets:'1行に1項目',accordion:'質問と回答を空行で区切ります。各まとまりの1行目が質問、2行目以降が回答',table:'1行に1行分。セルは | で区切ります（1行目は見出し）',balloon:'吹き出しの中の文章',imageText:'画像の横に表示する文章',html:'このHTMLは隔離された枠の中で表示されます（管理画面やログイン情報にはアクセスできません）'};
 // Segmented choice built from radio inputs: keyboard and screen-reader friendly, reads at a glance.
 function Seg<T extends string>({label,value,options,onChange}:{label:string;value:T;options:[T,string][];onChange:(v:T)=>void}){const name=label;return <fieldset className="seg"><legend>{label}</legend><div>{options.map(([v,l])=><label key={v} className={value===v?'on':''}><input type="radio" name={name} value={v} checked={value===v} onChange={()=>onChange(v)}/>{l}</label>)}</div></fieldset>;}
+function PickImage({onPick}:{onPick:(url:string)=>void}){const [open,O]=useState(false);return <div className="pick-image"><button type="button" className="text-btn" aria-expanded={open} onClick={()=>O(!open)}>{open?'閉じる':'アップロード済みの画像から選ぶ'}</button>{open&&<ImageLibrary onPick={url=>{onPick(url);O(false);}}/>}</div>;}
 export type FieldSection='content'|'design'|'display';
 export default function BlockFields({b,i,update,upload,busy,uploadError,section='content',blocks=[]}:{b:PageBlock;i:number;update:(i:number,c:Partial<PageBlock>)=>void;upload:(i:number,f:File)=>void;busy:number;uploadError:string;section?:FieldSection;blocks?:PageBlock[]}){
  const set=(c:Partial<PageBlock>)=>update(i,c);const usesText=['videoMenu','heading','subheading','text','button','bullets','imageText','balloon','accordion','table','progress','html'].includes(b.type);const usesUrl=['image','video','button','imageText','audio','pdf','balloon','webinar','section'].includes(b.type);const usesImage=['image','imageText','balloon','section'].includes(b.type);
@@ -24,6 +27,7 @@ export default function BlockFields({b,i,update,upload,busy,uploadError,section=
   {b.type==='button'&&<><Seg label="ボタンの動作" value={b.action||'link'} options={[['link','リンクへ移動'],['show','要素を表示'],['popup','ポップアップを開く']]} onChange={v=>set({action:v})}/>{b.action!=='link'&&<label>{b.action==='show'?'表示する要素（「最初は非表示」のもの）':'開くポップアップ'}<select value={b.target} onChange={e=>set({target:e.target.value})}><option value="">選択してください</option>{blocks.filter(x=>x.reveal===(b.action==='show'?'hidden':'popup')).map(x=><option key={x.id} value={x.id}>{blocks.indexOf(x)+1}. {blockLabels[x.type]}{x.text?'：'+x.text.slice(0,20):''}</option>)}</select><small>{b.action==='show'?'もう一度押すと隠します。':'対象の要素は「表示」タブで「ポップアップ」にします。'}</small></label>}</>}
   {usesUrl&&!(b.type==='button'&&b.action&&b.action!=='link')&&<label>{b.type==='section'?'背景画像のURL（任意）':b.type==='webinar'?'動画のURL（YouTube・Vimeo）':b.type==='button'?'リンク先（#registrationでフォームへ）':b.type==='balloon'?'アイコン画像のURL（任意）':b.type==='audio'?'音声ファイルのURL（HTTPS・mp3等）':b.type==='pdf'?'PDFのURL（HTTPS）':'URL（HTTPS）'}<input value={b.url} onChange={e=>set({url:e.target.value})}/></label>}
   {usesImage&&<label>画像をアップロード（PNG・JPEG・WebP・GIF、5MB以下）<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy>=0} onChange={e=>{const f=e.target.files?.[0];if(f)upload(i,f);e.target.value='';}}/>{busy===i&&<small>アップロード中…</small>}{uploadError&&busy<0&&<small role="alert">{uploadError}</small>}<small>アップロードした画像は公開ページから誰でも閲覧できます。</small></label>}
+  {usesImage&&<PickImage onPick={url=>set({url})}/>}
   {b.type==='comments'&&<><label>見出し（任意）<input maxLength={300} value={b.title} placeholder="コメント" onChange={e=>set({title:e.target.value})}/></label><label className="checkbox"><input type="checkbox" checked={b.moderate!==false} onChange={e=>set({moderate:e.target.checked})}/>承認してから表示する（管理画面「ページ・フォーム」で承認）</label></>}
   {b.type==='section'&&<label>セクション名（管理用・任意）<input maxLength={300} value={b.title} onChange={e=>set({title:e.target.value})}/><small>この下の要素を、次のセクションまで1つの帯にまとめます。背景色・余白は「デザイン」で設定します。</small></label>}
   {b.type==='button'&&!b.src&&<label>アイコン・絵文字（任意・4文字まで）<input maxLength={4} value={b.icon} placeholder="▶" onChange={e=>set({icon:e.target.value})}/></label>}
