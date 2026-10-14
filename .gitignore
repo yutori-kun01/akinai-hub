@@ -6,3 +6,5 @@ dist/
 wrangler.standalone.json
 *.tsbuildinfo
 qa-output/
+.next/
+next-env.d.ts

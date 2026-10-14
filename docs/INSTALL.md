@@ -15,7 +15,7 @@ pnpm install --frozen-lockfile
 pnpm exec wrangler login
 ```
 
-pnpmがビルドスクリプトの承認を求める場合は、依存元を確認してpnpmの案内に従ってください。ZIPには秘密情報・実顧客データ・既存店舗IDを含めません。
+pnpm 11の設定（overrides と、esbuild・workerd などビルドスクリプトの許可）は同梱の pnpm-workspace.yaml にあります。この許可がないと `--frozen-lockfile` が失敗します（2026-10-14修正）。ZIPには秘密情報・実顧客データ・既存店舗IDを含めません。
 
 ## 2. D1とR2を作る
 
