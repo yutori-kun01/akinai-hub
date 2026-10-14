@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useState,type ReactNode,type CSSProperties} from 'react';
+import EventBooking from './event-booking';
 import {videoEmbed,parseChapters,webinarSlot,parseVideoMenu,episodeOpen,inlineParts,type PageBlock} from '@/lib/page-schema';
 const toEnd=(deadline:string)=>Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(deadline)?deadline:deadline+':00+09:00');
 const left=(sec:number)=>`残り ${Math.floor(sec/86400)}日 ${String(Math.floor(sec/3600)%24).padStart(2,'0')}時間 ${String(Math.floor(sec/60)%60).padStart(2,'0')}分 ${String(sec%60).padStart(2,'0')}秒`;
@@ -19,6 +20,7 @@ function Webinar({b,preview}:{b:PageBlock;preview:boolean}){const [now,N]=useSta
 // Episodes open on a date or N days after the first visit (remembered in this browser, like the per-visitor countdown).
 function VideoMenu({b,preview}:{b:PageBlock;preview:boolean}){const items=parseVideoMenu(b.text);const [first,F]=useState<number|null>(null),[pick,P]=useState(0);useEffect(()=>{let t=Date.now();try{const k='akh_vm_'+b.id;const v=Number(localStorage.getItem(k));if(v>0&&!preview)t=v;else if(!preview)localStorage.setItem(k,String(t));}catch{}F(t);},[b.id,preview]);if(!items.length)return <p className="subtle">「タイトル|動画URL|公開」を1行ずつ入力してください</p>;const now=Date.now();const open=items.map(e=>preview||first===null?true:episodeOpen(e,first,now));const cur=open[pick]?pick:Math.max(0,open.lastIndexOf(true));const embed=videoEmbed(items[cur]?.url||'');
  return <div className="lp-video-menu">{embed?<iframe key={cur} className="lp-video" src={embed} title={items[cur].title} loading="lazy" allowFullScreen referrerPolicy="strict-origin-when-cross-origin"/>:<p className="subtle">動画URLを確認してください</p>}<ol>{items.map((e,i)=><li key={i}><button type="button" disabled={!open[i]} aria-current={cur===i?'true':undefined} onClick={()=>P(i)}><span>{i+1}</span>{e.title}{!open[i]&&<small>{e.date!==null?new Date(e.date).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric'})+'公開':first!==null&&e.days!==null?new Date(first+e.days*86400000).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric'})+'公開':'近日公開'}</small>}</button></li>)}</ol></div>;}
+function EventEmbed({b,owner}:{b:PageBlock;owner:string}){const [d,D]=useState<any>(null),[err,E]=useState('');useEffect(()=>{fetch(`/api/events/info?owner=${encodeURIComponent(owner)}&event=${encodeURIComponent(b.target)}`).then(async r=>{const x=await r.json() as any;if(!r.ok)throw Error(x.error);D(x);}).catch(e=>E(String(e.message||e)));},[b.target,owner]);if(err)return <p className="subtle">{err}</p>;if(!d)return <p className="subtle">日程を読み込み中…</p>;return <div className="lp-event">{b.title&&<h3>{b.title}</h3>}<EventBooking owner={owner} eventId={d.eventId} sessions={d.sessions} loggedEmail={d.loggedEmail} mine={d.mine} waitlist={d.waitlist}/></div>;}
 type CommentRow={id:string;name:string;body:string;created:number;pending:boolean};
 function Comments({b,track}:{b:PageBlock;track:Track}){const [rows,R]=useState<CommentRow[]|null>(null),[signedIn,S]=useState(false),[name,N]=useState(''),[body,B]=useState(''),[busy,U]=useState(false),[msg,M]=useState('');
  const load=()=>fetch(`/api/comments?owner=${encodeURIComponent(track.owner)}&page=${track.pageId}&block=${b.id}`).then(r=>r.json()).then((d:any)=>{R(d.comments||[]);S(!!d.signedIn);}).catch(()=>R([]));useEffect(()=>{load();},[]);
@@ -44,6 +46,7 @@ function Block({b,deadline,form,preview,act,track,signupAt,mailAt}:{b:PageBlock;
  case 'table':return <Table text={b.text} title={b.title}/>;
  case 'webinar':return <Webinar b={b} preview={preview}/>;
  case 'videoMenu':return <VideoMenu b={b} preview={preview}/>;
+ case 'event':return track&&!preview?<EventEmbed b={b} owner={track.owner}/>:<div className="lp-form-placeholder">イベント予約フォーム<br/><small>{b.target?'公開ページで日程と空席が表示されます':'「内容」で予約を受け付けるイベントを選んでください'}</small></div>;
  case 'comments':return track&&!preview?<Comments b={b} track={track}/>:<div className="lp-form-placeholder">コメント欄<br/><small>公開ページで、ログインした購入者・読者が投稿できます{b.moderate!==false?'（承認後に表示）':''}</small></div>;
  case 'section':return preview?<div className="lp-section-mark">セクション{b.title?'：'+b.title:''}<small>この下の要素を背景つきの帯にまとめます（次のセクションまで）</small></div>:null;
  case 'spacer':return <div className="lp-spacer" aria-hidden="true"/>;
