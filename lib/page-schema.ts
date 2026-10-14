@@ -1,7 +1,7 @@
 import {z} from 'zod';
 const safeLink=z.string().max(1500).refine(v=>!v||/^https:\/\/[^\s]+$/.test(v)||/^\/[a-zA-Z0-9][^\s\\]*$/.test(v)||/^#[a-zA-Z][\w-]*$/.test(v),'HTTPSまたはサイト内のリンクを指定してください');
 const hex=z.string().regex(/^(#[0-9a-fA-F]{6})?$/,'色は#RRGGBBで指定してください').default('');
-export const blockTypes=['heading','subheading','text','bullets','image','imageText','video','audio','button','form','countdown','progress','pdf','balloon','accordion','table','divider','spacer','html','webinar','section','videoMenu'] as const;
+export const blockTypes=['heading','subheading','text','bullets','image','imageText','video','audio','button','form','countdown','progress','pdf','balloon','accordion','table','divider','spacer','html','webinar','section','videoMenu','comments'] as const;
 // One flat block shape for every element; fields a type does not use keep their defaults, so older pages still parse.
 export const blockSchema=z.object({id:z.string().min(1).max(100),type:z.enum(blockTypes),text:z.string().max(20000).default(''),url:safeLink.default(''),alt:z.string().max(300).default(''),align:z.enum(['left','center']).default('left'),tone:z.enum(['plain','soft','accent']).default('plain'),visibility:z.enum(['all','desktop','mobile']).default('all'),
  title:z.string().max(300).default(''),side:z.enum(['left','right']).default('left'),shape:z.enum(['square','rounded','circle']).default('rounded'),value:z.number().int().min(0).max(100).default(50),style:z.enum(['solid','stripe']).default('solid'),pdfMode:z.enum(['link','viewer']).default('link'),countdownMode:z.enum(['deadline','evergreen']).default('deadline'),hours:z.number().int().min(1).max(8760).default(24),redirectUrl:safeLink.default(''),height:z.number().int().min(80).max(3000).default(400),width:z.enum(['full','half','third','twoThirds']).default('full'),bg:hex,color:hex,size:z.enum(['s','m','l']).default('m'),animation:z.enum(['none','pulse','bounce']).default('none'),sticky:z.boolean().default(false),
@@ -12,7 +12,9 @@ export const blockSchema=z.object({id:z.string().min(1).max(100),type:z.enum(blo
  // Shown only while an auto-webinar on the page is live and has played this many minutes (0 = always).
  showAt:z.number().int().min(0).max(600).default(0),
  // Button image (replaces the text button) and a short icon/emoji before the label.
- src:safeLink.default(''),icon:z.string().max(4).default('')});
+ src:safeLink.default(''),icon:z.string().max(4).default(''),
+ // Comments: approve before showing (true) or show at once.
+ moderate:z.boolean().default(true)});
 // Extra form questions (UTAGE's 読者項目/フリー項目, 住所・電話). Answers are stored on the contact (and the order for purchases).
 export const formFieldTypes=['text','textarea','tel','postal','address','date','select','checkbox'] as const;
 export const formFieldSchema=z.object({key:z.string().regex(/^[a-z][a-z0-9_]{0,30}$/,'項目キーは英小文字で始まる英数字・_（31文字以内）です'),label:z.string().trim().min(1).max(100),type:z.enum(formFieldTypes).default('text'),required:z.boolean().default(false),options:z.string().max(2000).default('')});

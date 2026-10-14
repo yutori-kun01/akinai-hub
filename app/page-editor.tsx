@@ -1,6 +1,6 @@
 'use client';
 import {useState,type ReactNode} from 'react';
-import {ArrowUp,ArrowDown,Copy,Trash2,Monitor,Smartphone,Settings2,Search,Plus,X as Close,Heading1,Heading2,Pilcrow,ListChecks,CircleHelp,Table,Image,PanelLeft,Play,Music,MessageCircle,FileText,RectangleHorizontal,SquarePen,Timer,ChartNoAxesColumn,Minus,MoveVertical,Code,Radio,Rows3,ListVideo,type LucideIcon} from 'lucide-react';
+import {ArrowUp,ArrowDown,Copy,Trash2,Monitor,Smartphone,Settings2,Search,Plus,X as Close,Heading1,Heading2,Pilcrow,ListChecks,CircleHelp,Table,Image,PanelLeft,Play,Music,MessageCircle,FileText,RectangleHorizontal,SquarePen,Timer,ChartNoAxesColumn,Minus,MoveVertical,Code,Radio,Rows3,ListVideo,MessagesSquare,type LucideIcon} from 'lucide-react';
 import PageBlocks from './page-blocks';
 import BlockFields,{blockLabels,type FieldSection} from './block-fields';
 import {blockSchema} from '@/lib/page-schema';
@@ -13,7 +13,7 @@ const starter:Partial<Record<PageBlock['type'],string>>={videoMenu:'第1話 は�
 const groups:{name:string;types:[PageBlock['type'],LucideIcon][]}[]=[
  {name:'文章',types:[['heading',Heading1],['subheading',Heading2],['text',Pilcrow],['bullets',ListChecks],['accordion',CircleHelp],['table',Table]]},
  {name:'メディア',types:[['image',Image],['imageText',PanelLeft],['video',Play],['webinar',Radio],['videoMenu',ListVideo],['audio',Music],['balloon',MessageCircle],['pdf',FileText]]},
- {name:'販売・登録',types:[['button',RectangleHorizontal],['form',SquarePen],['countdown',Timer],['progress',ChartNoAxesColumn]]},
+ {name:'販売・登録',types:[['button',RectangleHorizontal],['form',SquarePen],['countdown',Timer],['comments',MessagesSquare],['progress',ChartNoAxesColumn]]},
  {name:'レイアウト',types:[['section',Rows3],['divider',Minus],['spacer',MoveVertical],['html',Code]]},
 ];
 // Section snippets: a few blocks that belong together, inserted at once (UTAGE users build pages from these patterns).

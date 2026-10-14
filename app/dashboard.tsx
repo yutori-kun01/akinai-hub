@@ -4,6 +4,7 @@ import PageEditor from "./page-editor";
 import FunnelMap from "./funnel-map";
 import RuleEditor from "./rule-editor";
 import EventEditor from "./event-editor";
+import CommentPanel from "./comment-panel";
 import {PartnerFields,PartnerReport} from "./partner-panel";
 import LinePanel from "./line-panel";
 import IntegrationsPanel from "./integrations-panel";
@@ -47,6 +48,7 @@ export default function Dashboard(){
 
  {tab==='campaigns'&&<section className="card"><div className="section-title"><h2>配信キュー</h2><span className="badge amber">{con.mail?'手動実行可能':'送信処理は未接続'}</span></div><p className="subtle">受付済みは配信サービスでの受付を表し、到達確認は含みません。予約時点の本文を保存し、送信前にも同意・配信停止を再確認する設計です。独立ホスティングではCronが定期処理します。LINEの受付済みも端末到達を保証するものではありません。</p>{con.mail&&<button className="secondary" disabled={busy} onClick={async()=>{if(!window.confirm('配信同意を確認し、期限を迎えたメールを最大10件送信しますか？'))return;setBusy(true);try{const r=await fetch('/api/mail/process',{method:'POST'});const d=await r.json() as Item;if(!r.ok)throw Error(d.error);setNotice(`${d.sent}件送信・${d.suppressed}件配信対象外`);await load();}catch(e){setError(String(e));}finally{setBusy(false);}}}>期限を迎えた配信を実行</button>}<div className="table-wrap"><table><thead><tr><th>件名</th><th>予定日時</th><th>サービス</th><th>状態</th><th></th></tr></thead><tbody>{state.jobs.map((j:Item)=><tr key={j.id}><td>{j.subject}</td><td>{date(j.due)}</td><td>{j.provider||'—'}{j.error&&<small className="subtle">{j.error}</small>}</td><td><Badge value={j.status}/></td><td>{j.status==='queued'&&<button className="text-btn" onClick={()=>act({action:'cancel-job',id:j.id})}>予約取消</button>}</td></tr>)}</tbody></table></div></section>}</>}
  {tab==='orders'&&<><div className="toolbar"><span>{orders.length} 件の注文</span><a className="secondary" href="/api/hub?export=orders"><Download size={15}/>CSV出力</a></div><section className="card">{!orders.length?<Empty icon={ShoppingBag} title="注文はまだありません" text="銀行振込の申込を登録し、入金を確認したら状態を更新できます。"/>:<OrderTable list={orders} contacts={contacts} action={async(o,a)=>{if(!window.confirm(a==='confirm-bank'?'実際の入金を確認済みですか？確認済みとして記録します。':a==='revoke'?'納品アクセスを停止します。返金処理は行われません。':'この未入金注文をキャンセルしますか？'))return;await act({action:'order-state',id:o.id,version:o.version,transition:a});}}/>}</section><div className="note-box"><ShieldCheck size={20}/><div><strong>入金状態と納品を連動</strong><p>入金済みの注文だけがファイルを取得できます。現在のダウンロードは管理者確認用です。購入者用ログイン・本棚も実装済みです。一般公開と納品メールは接続前です。</p></div></div></>}
+ {tab==='pages'&&<CommentPanel comments={items('comments')} pages={items('pages')} act={act}/>}
  {tab==='partners'&&<PartnerReport rows={state?.partnerReport||[]} act={act}/>}
  {tab==='line'&&<LinePanel contacts={items('lineContacts')} records={records} reload={load}/>}
  {tab==='integrations'&&<IntegrationsPanel reload={load}/>}

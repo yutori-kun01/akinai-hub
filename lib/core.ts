@@ -2,7 +2,7 @@ import { z } from "zod";
 import {ruleSchema} from './rules.ts';
 import {pageExtras,blockSchema} from "./page-schema.ts";
 import {lineMessageList,lineAction,richMenuLayouts} from "./line-messages.ts";
-export const kinds=["products","contacts","pages","campaigns","sequences","courses","settings","lineContacts","apps","licenses","releases","coupons","richMenus","lineAutoReplies","events","bookings","partners","payouts"] as const;
+export const kinds=["products","contacts","pages","campaigns","sequences","courses","settings","lineContacts","apps","licenses","releases","coupons","richMenus","lineAutoReplies","events","bookings","partners","payouts","comments"] as const;
 export type Kind=typeof kinds[number];
 const text=z.string().trim().max(20000);const short=z.string().trim().min(1).max(200);
 const redirectUri=z.string().max(1000).refine(v=>/^https:\/\/[^\s#]+$/.test(v)||/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/[^\s#]*$/.test(v),"リダイレクトURIはHTTPS（開発時のみlocalhost）を指定してください");
@@ -28,6 +28,8 @@ export const schemas={
  // Affiliate partners (UTAGE's パートナー): referral code in ?aff=, 30-day last-click cookie, monthly approval, manual payout.
  partners:z.object({name:short,email:z.string().trim().email().max(254).transform(s=>s.toLowerCase()),code:z.string().trim().toLowerCase().pipe(z.string().regex(/^[a-z0-9_-]{3,30}$/,"紹介コードは英小文字・数字・-・_の3〜30文字です")),status:z.enum(["active","paused"]).default("active"),commissionType:z.enum(["percent","fixed"]).default("percent"),value:z.number().int().min(0).max(1000000).default(10),note:z.string().max(1000).default("")}).refine(p=>p.commissionType!=="percent"||p.value<=100,{message:"報酬率は100%以下です",path:["value"]}),
  payouts:z.object({name:short,partnerId:z.string().min(1).max(100),month:z.string().regex(/^\d{4}-\d{2}$/),amount:z.number().int().min(0),orderIds:z.array(z.string().max(100)).max(5000),status:z.enum(["approved","paid"])}),
+ // Page comments (UTAGE's コメント要素). Posted by signed-in buyers through app/api/comments only.
+ comments:z.object({name:short,pageId:z.string().min(1).max(100),blockId:z.string().min(1).max(100),body:z.string().trim().min(1).max(1000),status:z.enum(["pending","approved","hidden"]),buyer:z.string().max(300),email:z.string().max(254)}),
  courses:z.object({name:short,productId:z.string().min(1).max(100),lessons:z.array(z.object({title:short,body:text,videoUrl:z.string().max(1000).default("")})).max(100)}),
  settings:z.object({lineAddUrl:z.string().max(1000).refine(v=>!v||/^https:\/\/(lin\.ee|line\.me)\//.test(v),"LINEの友だち追加URLを入力してください").default(""),lineFollowTag:z.string().max(40).default("line"),mailProvider:z.enum(["resend","brevo","sendgrid","mailgun","postmark"]).default("resend"),name:short,fromName:z.string().max(100),footer:text,bankInstructions:text,legalText:text,privacyText:text})
 };

@@ -308,6 +308,17 @@ try{
  const otp=async email=>{const q=await request('/api/auth/request-code',{email});const code=deliveries.at(-1).text.match(/\d{6}/)[0];return (await request('/api/auth/verify-code',{email,challenge:q.data.challenge,code})).cookie;};const pc=await otp('partner@example.com');
  const k3=crypto.randomUUID();r=await request('/api/purchase',{owner:'store',pageId:page.id,method:'bank',consent:false,terms:true,key:k3},pc+'; akh_aff=yuka_1');assert.equal(r.status,200,JSON.stringify(r.data));assert.equal((await request('/api/hub',undefined,admin.cookie)).data.records.find(x=>x.id===k3).partnerId,undefined);
  const portal=await request('/partner',undefined,pc);assert.match(portal.data,/Yuka(<!-- -->)? さん/);assert.match(portal.data,/aff-lp\?aff=yuka_1/);assert.match(portal.data,/お支払い済み/);assert.doesNotMatch((await request('/partner',undefined,buyer.cookie)).data,/Yuka/);checks++;}
+
+ {// Comments: buyers post, pending until approved, visible to everyone after; admin can hide; no comment block → refused
+ const cp=await save('pages',{name:'Comment LP',slug:'comment-lp',headline:'Talk',body:'',productId:'',pageType:'thanks',status:'published',blocks:[{id:'cm',type:'comments'},{id:'cm2',type:'comments',moderate:false}]},admin.cookie);const q=`/api/comments?owner=store&page=${cp.id}&block=cm`;
+ assert.equal((await request('/api/comments',{owner:'store',pageId:cp.id,blockId:'cm',name:'A',body:'hi'})).status,401);
+ let r=await request('/api/comments',{owner:'store',pageId:cp.id,blockId:'cm',name:'読者A',body:'<b>質問です</b>'},buyer.cookie);assert.equal(r.status,200,JSON.stringify(r.data));assert.equal(r.data.pending,true);
+ assert.equal((await request(q)).data.comments.length,0);assert.equal((await request(q,undefined,buyer.cookie)).data.comments[0].pending,true);
+ assert.equal((await request('/api/comments',{owner:'store',pageId:cp.id,blockId:'nope',name:'x',body:'x'},buyer.cookie)).status,400);
+ assert.equal((await request('/api/comments',{owner:'store',pageId:cp.id,blockId:'cm2',name:'読者B',body:'すぐ表示'},buyer.cookie)).data.pending,false);
+ const c=(await request('/api/hub',undefined,admin.cookie)).data.records.find(x=>x.kind==='comments'&&x.blockId==='cm');assert.equal((await request('/api/hub',{action:'comment-status',id:c.id,status:'approved'},admin.cookie)).status,200);
+ assert.equal((await request(q)).data.comments[0].body,'<b>質問です</b>');await request('/api/hub',{action:'comment-status',id:c.id,status:'hidden'},admin.cookie);assert.equal((await request(q)).data.comments.length,0);
+ assert.equal((await request('/api/hub',{action:'save',kind:'comments',data:{name:'x',pageId:cp.id,blockId:'cm',body:'x',status:'approved',buyer:'',email:''}},admin.cookie)).status,400);checks++;}
  const out=await request('/api/auth/logout',{},buyer.cookie);assert.equal(out.status,200);assert.equal((await request('/api/customer-download?order='+bankKey,undefined,buyer.cookie)).status,401);checks++;
  console.log('PASS '+checks+' standalone integration checks; mock provider requests only.');
 }finally{await mf.dispose();}
