@@ -1,0 +1,3 @@
+import { env } from "cloudflare:workers";
+import { ownerOf,get,fail } from "@/lib/server";
+export async function GET(req:Request){try{const owner=await ownerOf(req);const id=new URL(req.url).searchParams.get('order');if(!id)throw Error('注文番号が必要です');const o=await get(owner,id);if(o?.kind!=='orders'||o.status!=='paid')throw Error('入金済みの注文が必要です');const p=await get(owner,o.productId);if(!p?.deliveryKey?.startsWith(owner+'/'))throw Error('納品ファイルが未登録です');const file=await env.BUCKET?.get(p.deliveryKey);if(!file)throw Error('ファイルがありません');return new Response(file.body,{headers:{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="'+(file.customMetadata?.filename||'download.zip')+'"','Cache-Control':'no-store'}});}catch(e){return fail(e);}}

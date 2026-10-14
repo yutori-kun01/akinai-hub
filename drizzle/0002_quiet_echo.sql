@@ -1,0 +1,1 @@
+ALTER TABLE `jobs` ADD `category` text DEFAULT 'marketing' NOT NULL;

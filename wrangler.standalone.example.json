@@ -1,0 +1,12 @@
+{
+ "name":"commerce-hub",
+ "main":"build/standalone-worker.ts",
+ "compatibility_date":"2026-05-15",
+ "compatibility_flags":["nodejs_compat"],
+ "assets":{"binding":"ASSETS","directory":"dist/client"},
+ "d1_databases":[{"binding":"DB","database_name":"commerce-hub","database_id":"00000000-0000-4000-8000-000000000000","migrations_dir":"drizzle"}],
+ "r2_buckets":[{"binding":"BUCKET","bucket_name":"commerce-hub-files"}],
+ "triggers":{"crons":["*/5 * * * *"]},
+ "vars":{"AUTH_MODE":"standalone","WORKSPACE_ID":"store","ADMIN_EMAIL":"","PUBLIC_ORIGIN":"","MAIL_ENABLED":"false","COMMERCE_ENABLED":"false","AUTO_BACKUP_ENABLED":"false"},
+ "observability":{"enabled":true}
+}

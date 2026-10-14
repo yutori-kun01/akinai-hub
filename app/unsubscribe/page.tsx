@@ -1,0 +1,3 @@
+import {validToken} from '@/lib/mail';
+export const dynamic='force-dynamic';
+export default async function Unsubscribe({searchParams}:{searchParams:Promise<Record<string,string>>}){const s=await searchParams;let valid=false;try{valid=await validToken(s.owner||'',s.contact||'',s.token||'');}catch{}return <div className="store"><h1>メールの配信停止</h1>{valid?<form action="/api/unsubscribe" method="post"><input type="hidden" name="owner" value={s.owner}/><input type="hidden" name="contact" value={s.contact}/><input type="hidden" name="token" value={s.token}/><p>配信を停止しても、購入済みコンテンツはご利用いただけます。</p><button className="primary">配信を停止する</button></form>:<p>リンクを確認できませんでした。販売者へお問い合わせください。</p>}</div>;}

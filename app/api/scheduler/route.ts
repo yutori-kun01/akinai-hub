@@ -1,0 +1,3 @@
+import {cfg,response,fail} from '@/lib/server';
+import {runAutomation} from '@/lib/automation';
+export async function POST(req:Request){const expected=cfg().SCHEDULER_SECRET;const token=req.headers.get('authorization')?.replace(/^Bearer /,'')||'';if(!expected||!cfg().SCHEDULER_OWNER||!cfg().PUBLIC_ORIGIN)return response({error:'scheduler not configured'},503);if(token.length!==expected.length)return response({error:'forbidden'},403);let diff=0;for(let i=0;i<token.length;i++)diff|=token.charCodeAt(i)^expected.charCodeAt(i);if(diff)return response({error:'forbidden'},403);try{return response(await runAutomation(cfg().SCHEDULER_OWNER,cfg().PUBLIC_ORIGIN));}catch(e){return fail(e);}}

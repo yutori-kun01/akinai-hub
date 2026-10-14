@@ -1,0 +1,3 @@
+import { env } from "cloudflare:workers";
+import { ownerOf,response,fail,auditStatement } from "@/lib/server";
+export async function POST(req:Request){try{const owner=await ownerOf(req);if(!env.BUCKET)throw Error('ストレージが未接続です');const data=await req.formData();const file=data.get('file');if(!(file instanceof File)||file.size>25*1024*1024)throw Error('25MB以下のファイルを選択してください');const name=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');const key=owner+'/'+crypto.randomUUID()+'/'+name;await env.BUCKET.put(key,await file.arrayBuffer(),{httpMetadata:{contentType:'application/octet-stream'},customMetadata:{filename:name}});await auditStatement(owner,'asset:upload',key).run();return response({key,name,size:file.size});}catch(e){return fail(e);}}

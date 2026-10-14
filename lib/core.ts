@@ -1,0 +1,22 @@
+import { z } from "zod";
+import {pageExtras} from "./page-schema.ts";
+export const kinds=["products","contacts","pages","campaigns","sequences","courses","settings","lineContacts"] as const;
+export type Kind=typeof kinds[number];
+const text=z.string().trim().max(20000);const short=z.string().trim().min(1).max(200);
+const deliveryRules={channel:z.enum(["email","line"]).default("email"),excludeTag:z.string().max(40).default(""),stopProductId:z.string().max(100).default(""),requireProductId:z.string().max(100).default("")};
+export const schemas={
+ lineContacts:z.object({name:short,userId:z.string().regex(/^U[0-9a-f]{32}$/),contactId:z.string().max(100).default(""),tags:z.array(z.string().max(40)).max(30).default([]),status:z.enum(["subscribed","unsubscribed"]),eventAt:z.number().default(0)}),
+ products:z.object({name:short,description:text,price:z.number().int().min(0).max(100000000),status:z.enum(["draft","active","archived"]),deliveryKey:z.string().max(300).default(""),supportUrl:z.string().max(1000).default("")}),
+ contacts:z.object({consentEvidence:z.string().max(3000).default(''),name:short,email:z.string().trim().email().max(254).transform(s=>s.toLowerCase()),tags:z.array(z.string().trim().min(1).max(40)).max(30),consent:z.boolean(),status:z.enum(["subscribed","unsubscribed"]),source:z.string().max(200).default("manual")}),
+ pages:z.object({...pageExtras,name:short,slug:z.string().regex(/^[a-z][a-z0-9-]{2,70}$/),headline:short,body:text,productId:z.string().max(100),status:z.enum(["draft","published"]),deadline:z.string().max(40).default("")}),
+ campaigns:z.object({...deliveryRules,name:short,subject:short,body:text,tag:z.string().max(40),scheduledAt:z.string().max(40),status:z.enum(["draft","ready"])}),
+ sequences:z.object({...deliveryRules,status:z.enum(["draft","active","paused"]).default("draft"),name:short,tag:z.string().min(1).max(40),steps:z.array(z.object({delayHours:z.number().int().min(0).max(8760),subject:short,body:text})).min(1).max(20)}),
+ courses:z.object({name:short,productId:z.string().min(1).max(100),lessons:z.array(z.object({title:short,body:text,videoUrl:z.string().max(1000).default("")})).max(100)}),
+ settings:z.object({lineAddUrl:z.string().max(1000).refine(v=>!v||/^https:\/\/(lin\.ee|line\.me)\//.test(v),"LINEの友だち追加URLを入力してください").default(""),lineFollowTag:z.string().max(40).default("line"),mailProvider:z.enum(["resend","brevo","sendgrid","mailgun","postmark"]).default("resend"),name:short,fromName:z.string().max(100),footer:text,bankInstructions:text,legalText:text,privacyText:text})
+};
+export function csvCell(value:unknown){let s=String(value??"");if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';}
+export function parseCSV(input:string):string[][]{const rows:string[][]=[];let row:string[]=[],cell="",quoted=false;for(let i=0;i<input.length;i++){const c=input[i];if(c==='"'){if(quoted&&input[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(c===','&&!quoted){row.push(cell);cell="";}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&input[i+1]==='\n')i++;row.push(cell);if(row.some(Boolean))rows.push(row);row=[];cell="";}else cell+=c;}if(quoted)throw Error("CSVの引用符が閉じていません");row.push(cell);if(row.some(Boolean))rows.push(row);return rows;}
+export function transitionOrder(current:string,action:string){if(action==='confirm-bank'&&current==='pending_bank')return 'paid';if(action==='cancel'&&current==='pending_bank')return 'cancelled';if(action==='revoke'&&current==='paid')return 'revoked';throw Error('この注文の状態では実行できません');}
+export async function verifyStripe(raw:string,signature:string,secret:string,now=Date.now()){const parts=signature.split(',');const t=parts.find(x=>x.startsWith('t='))?.slice(2);const sigs=parts.filter(x=>x.startsWith('v1=')).map(x=>x.slice(3));if(!t||!/^\d+$/.test(t)||Math.abs(now/1000-Number(t))>300)return false;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);const out=Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(t+'.'+raw)))).map(b=>b.toString(16).padStart(2,'0')).join('');return sigs.some(s=>{if(s.length!==out.length)return false;let diff=0;for(let i=0;i<s.length;i++)diff|=s.charCodeAt(i)^out.charCodeAt(i);return diff===0;});}
+
+export function parseJapanDate(value:string){if(!value)return NaN;return Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(value)?value:value+':00+09:00');}

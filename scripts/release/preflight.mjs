@@ -1,0 +1,3 @@
+import {readFile} from 'node:fs/promises';
+const c=JSON.parse(await readFile('wrangler.standalone.json','utf8'));
+const failures=[];if(c.vars.AUTH_MODE!=='standalone')failures.push('AUTH_MODE=standalone');if(!/^https:\/\//.test(c.vars.PUBLIC_ORIGIN||''))failures.push('PUBLIC_ORIGIN');if(!c.vars.ADMIN_EMAIL?.includes('@'))failures.push('ADMIN_EMAIL');if(!c.d1_databases?.[0]?.database_id||c.d1_databases[0].database_id.startsWith('00000000'))failures.push('D1 ID');if(!c.r2_buckets?.[0]?.bucket_name)failures.push('R2バケット');if(failures.length){console.error('不足設定: '+failures.join(', '));process.exitCode=1;}else console.log('ローカル設定OK。シークレット・DNS・実送信・Stripeは管理画面で別途確認してください。');

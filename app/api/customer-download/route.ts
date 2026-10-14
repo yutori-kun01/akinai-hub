@@ -1,0 +1,4 @@
+import {customerOf} from '@/lib/auth';
+import {env} from 'cloudflare:workers';
+import {db,get,ownerOf,unpack,type Row,fail} from '@/lib/server';
+export async function GET(req:Request){try{const buyer=(await customerOf(req)).userId;const id=new URL(req.url).searchParams.get('order');const row=await db().prepare("SELECT * FROM records WHERE id=? AND kind='orders' AND json_extract(data,'$.buyer')=?").bind(id,buyer).first<Row>();if(!row)throw Error('注文がありません');const o=unpack(row);if(o.status!=='paid')throw Error('入金済みの注文が必要です');const p=await get(row.owner,o.productId);if(!p?.deliveryKey?.startsWith(row.owner+'/'))throw Error('納品準備中です');const file=await env.BUCKET?.get(p.deliveryKey);if(!file)throw Error('ファイルがありません');return new Response(file.body,{headers:{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="'+(file.customMetadata?.filename||'download.zip')+'"','Cache-Control':'no-store'}});}catch(e){return fail(e);}}

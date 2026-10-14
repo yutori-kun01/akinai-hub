@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1791894093617,
+      "tag": "0000_ambitious_angel",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791894412568,
+      "tag": "0001_light_carlie_cooper",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791894548641,
+      "tag": "0002_quiet_echo",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791897954077,
+      "tag": "0003_luxuriant_namorita",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791900544352,
+      "tag": "0004_nasty_dracula",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791900733955,
+      "tag": "0005_friendly_caretaker",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791934392222,
+      "tag": "0006_crazy_albert_cleary",
+      "breakpoints": true
+    }
+  ]
+}

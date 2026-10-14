@@ -1,0 +1,40 @@
+# Runtime secrets: configure using hosting controls. Never commit values.
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+RESEND_API_KEY=
+MAIL_FROM=
+# Enable only after test-mode verification and public/customer authentication design.
+COMMERCE_ENABLED=false
+MAIL_ENABLED=false
+MAIL_TOKEN_SECRET=
+SCHEDULER_SECRET=
+SCHEDULER_OWNER=
+PUBLIC_ORIGIN=
+# Choose provider in Settings. Only the selected provider needs credentials.
+BREVO_API_KEY=
+SENDGRID_API_KEY=
+MAILGUN_API_KEY=
+MAILGUN_DOMAIN=
+MAILGUN_REGION=us
+POSTMARK_SERVER_TOKEN=
+# Required: ID of a Broadcast stream; never use outbound here.
+POSTMARK_BROADCAST_STREAM_ID=
+POSTMARK_TRANSACTIONAL_STREAM_ID=outbound
+# Standalone authentication
+AUTH_MODE=standalone
+WORKSPACE_ID=store
+ADMIN_EMAIL=
+AUTH_SECRET=
+SETUP_TOKEN=
+AUTO_BACKUP_ENABLED=false
+# Provider webhooks (set only the selected provider)
+RESEND_WEBHOOK_SECRET=
+BREVO_WEBHOOK_TOKEN=
+SENDGRID_WEBHOOK_PUBLIC_KEY=
+MAILGUN_WEBHOOK_SIGNING_KEY=
+POSTMARK_WEBHOOK_PASSWORD=
+
+# LINE Messaging API (standalone deployment; secrets via Wrangler)
+LINE_CHANNEL_ACCESS_TOKEN=
+LINE_CHANNEL_SECRET=
+LINE_ENABLED=false
