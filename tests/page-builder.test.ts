@@ -33,3 +33,12 @@ test('extra form fields are validated and normalised on the server',()=>{
  assert.deepEqual(formValues(fields,{tel:' 03-1234-5678 ',postal:'１２３－４５６７',plan:'B',ok:true,extra:'x'}),{tel:'03-1234-5678',postal:'123-4567',plan:'B',ok:'はい'});
  assert.throws(()=>newBlockSchema.parse({id:'x',type:'text'})&&zz.object(extras).parse({formFields:[{key:'a',label:'A'},{key:'a',label:'B'}]}),/重複/);
 });
+import {webinarSlot} from '../lib/page-schema.ts';
+test('auto-webinar finds the live slot (also across midnight) or the next start',()=>{
+ const at=(s:string)=>Date.parse(s+'+09:00');
+ assert.deepEqual(webinarSlot('12:00,20:00',90,at('2026-10-14T20:30:00')),{state:'live',start:at('2026-10-14T20:00:00'),elapsed:1800});
+ assert.deepEqual(webinarSlot('12:00,20:00',90,at('2026-10-14T21:31:00')),{state:'waiting',start:at('2026-10-15T12:00:00'),elapsed:0});
+ assert.equal(webinarSlot('23:30',90,at('2026-10-15T00:10:00'))?.state,'live');
+ assert.equal(webinarSlot('',60,Date.now()),null);
+ assert.throws(()=>newBlockSchema.parse({id:'w',type:'webinar',times:'25:00'}));
+});

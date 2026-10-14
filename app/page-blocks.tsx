@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState,type ReactNode,type CSSProperties} from 'react';
-import {videoEmbed,parseChapters,type PageBlock} from '@/lib/page-schema';
+import {videoEmbed,parseChapters,webinarSlot,type PageBlock} from '@/lib/page-schema';
 const toEnd=(deadline:string)=>Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(deadline)?deadline:deadline+':00+09:00');
 const left=(sec:number)=>`残り ${Math.floor(sec/86400)}日 ${String(Math.floor(sec/3600)%24).padStart(2,'0')}時間 ${String(Math.floor(sec/60)%60).padStart(2,'0')}分 ${String(sec%60).padStart(2,'0')}秒`;
 export function Countdown({deadline}:{deadline:string}){const [now,N]=useState<number|null>(null);useEffect(()=>{N(Date.now());const id=setInterval(()=>N(Date.now()),1000);return()=>clearInterval(id);},[]);const end=toEnd(deadline);const sec=now===null?null:Math.max(0,Math.floor((end-now)/1000));return <div className="lp-countdown">{!deadline?'受付期限を設定してください':sec===null?'受付期限：'+deadline.replace('T',' '):!Number.isFinite(end)?'期限を確認してください':sec===0?'受付は終了しました':left(sec)}</div>}
@@ -11,6 +11,10 @@ function Table({text,title}:{text:string;title:string}){const rows=text.split('\
 function Img({b}:{b:PageBlock}){return b.url?<img className={'lp-image lp-shape-'+b.shape} src={b.url} alt={b.alt} loading="lazy"/>:<p className="subtle">画像URLを設定してください</p>}
 // Chapters reload the player at that second (YouTube start=, Vimeo #t=), so no player API script is needed.
 function Video({b,preview}:{b:PageBlock;preview:boolean}){const [at,A]=useState(0);const base=videoEmbed(b.url)!;const chapters=parseChapters(b.chapters||'');const src=!at?base:base.includes('vimeo')?`${base}#t=${at}s`:`${base}?start=${at}&autoplay=1`;return <><iframe key={at} className="lp-video" src={src} title={b.alt||'動画'} loading="lazy" allow="autoplay; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin"/>{chapters.length>0&&<ol className="lp-chapters">{chapters.map(c=><li key={c.at+c.title}><button type="button" disabled={preview} aria-current={at===c.at?'true':undefined} onClick={()=>A(c.at)}><span>{Math.floor(c.at/3600)?Math.floor(c.at/3600)+':':''}{String(Math.floor(c.at/60)%60).padStart(Math.floor(c.at/3600)?2:1,'0')}:{String(c.at%60).padStart(2,'0')}</span>{c.title}</button></li>)}</ol>}</>;}
+// Re-evaluates every second; the player is (re)created only when a live slot starts, at the elapsed second, without controls.
+function Webinar({b,preview}:{b:PageBlock;preview:boolean}){const [now,N]=useState<number|null>(null);useEffect(()=>{N(Date.now());const t=setInterval(()=>N(Date.now()),1000);return()=>clearInterval(t);},[]);const base=videoEmbed(b.url);if(!base)return <p className="subtle">YouTubeまたはVimeoの動画URLを設定してください</p>;if(!b.times)return <p className="subtle">開始時刻を設定してください</p>;if(now===null)return <div className="lp-webinar-wait">読み込み中…</div>;const slot=webinarSlot(b.times,b.duration,now);
+ if(!slot||slot.state==='waiting'){const sec=slot?Math.max(0,Math.floor((slot.start-now)/1000)):0;return <div className="lp-webinar-wait"><span className="lp-webinar-badge">{b.title||'オンラインセミナー'}</span><strong>{slot?new Date(slot.start).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' 開始':'次回の予定はありません'}</strong>{slot&&<span className="lp-countdown">{left(sec)}</span>}</div>;}
+ const src=preview?base:base.includes('vimeo')?`${base}?autoplay=1&muted=1&controls=0#t=${slot.elapsed}s`:`${base}?start=${slot.elapsed}&autoplay=1&mute=1&controls=0&disablekb=1&rel=0&modestbranding=1`;return <div className="lp-webinar"><span className="lp-webinar-badge live">● 配信中</span><iframe key={slot.start} className="lp-video" src={src} title={b.title||'オンラインセミナー'} allow="autoplay; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin"/><small>音声はプレーヤーのスピーカーボタンでオンにしてください。</small></div>;}
 function Block({b,deadline,form,preview,act}:{b:PageBlock;deadline:string;form?:ReactNode;preview:boolean;act?:(b:PageBlock)=>void}){switch(b.type){
  case 'heading':return <h2>{b.text}</h2>;
  case 'subheading':return <h3 className="lp-subheading">{b.text}</h3>;
@@ -28,6 +32,7 @@ function Block({b,deadline,form,preview,act}:{b:PageBlock;deadline:string;form?:
  case 'balloon':return <div className={'lp-balloon '+(b.side==='right'?'reverse':'')}><figure>{b.url?<img className={'lp-shape-'+b.shape} src={b.url} alt="" loading="lazy"/>:<span className="lp-avatar" aria-hidden="true">{(b.title||'？').slice(0,1)}</span>}{b.title&&<figcaption>{b.title}</figcaption>}</figure><p className="preline">{b.text}</p></div>;
  case 'accordion':return <div className="lp-accordion">{paragraphs(b.text).map((p,i)=>{const [q,...a]=p.split('\n');return <details key={i}><summary>{q}</summary><p className="preline">{a.join('\n')}</p></details>;})}</div>;
  case 'table':return <Table text={b.text} title={b.title}/>;
+ case 'webinar':return <Webinar b={b} preview={preview}/>;
  case 'spacer':return <div className="lp-spacer" aria-hidden="true"/>;
  // Isolated from this site: no allow-same-origin, so scripts inside cannot read cookies or call the admin API.
  case 'html':return <iframe className="lp-html" sandbox="allow-scripts allow-popups allow-forms" srcDoc={b.text} title="埋め込みコンテンツ" style={{height:b.height}} loading="lazy"/>;

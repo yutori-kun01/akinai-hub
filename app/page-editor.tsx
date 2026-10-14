@@ -1,6 +1,6 @@
 'use client';
 import {useState,type ReactNode} from 'react';
-import {ArrowUp,ArrowDown,Copy,Trash2,Monitor,Smartphone,Settings2,Search,Plus,X as Close,Heading1,Heading2,Pilcrow,ListChecks,CircleHelp,Table,Image,PanelLeft,Play,Music,MessageCircle,FileText,RectangleHorizontal,SquarePen,Timer,ChartNoAxesColumn,Minus,MoveVertical,Code,type LucideIcon} from 'lucide-react';
+import {ArrowUp,ArrowDown,Copy,Trash2,Monitor,Smartphone,Settings2,Search,Plus,X as Close,Heading1,Heading2,Pilcrow,ListChecks,CircleHelp,Table,Image,PanelLeft,Play,Music,MessageCircle,FileText,RectangleHorizontal,SquarePen,Timer,ChartNoAxesColumn,Minus,MoveVertical,Code,Radio,type LucideIcon} from 'lucide-react';
 import PageBlocks from './page-blocks';
 import BlockFields,{blockLabels,type FieldSection} from './block-fields';
 import {blockSchema} from '@/lib/page-schema';
@@ -12,7 +12,7 @@ const starter:Partial<Record<PageBlock['type'],string>>={heading:'新しい見�
 // Element palette grouped like UTAGE's element picker.
 const groups:{name:string;types:[PageBlock['type'],LucideIcon][]}[]=[
  {name:'文章',types:[['heading',Heading1],['subheading',Heading2],['text',Pilcrow],['bullets',ListChecks],['accordion',CircleHelp],['table',Table]]},
- {name:'メディア',types:[['image',Image],['imageText',PanelLeft],['video',Play],['audio',Music],['balloon',MessageCircle],['pdf',FileText]]},
+ {name:'メディア',types:[['image',Image],['imageText',PanelLeft],['video',Play],['webinar',Radio],['audio',Music],['balloon',MessageCircle],['pdf',FileText]]},
  {name:'販売・登録',types:[['button',RectangleHorizontal],['form',SquarePen],['countdown',Timer],['progress',ChartNoAxesColumn]]},
  {name:'レイアウト',types:[['divider',Minus],['spacer',MoveVertical],['html',Code]]},
 ];

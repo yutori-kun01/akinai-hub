@@ -1,12 +1,14 @@
 import {z} from 'zod';
 const safeLink=z.string().max(1500).refine(v=>!v||/^https:\/\/[^\s]+$/.test(v)||/^\/[a-zA-Z0-9][^\s\\]*$/.test(v)||/^#[a-zA-Z][\w-]*$/.test(v),'HTTPSまたはサイト内のリンクを指定してください');
 const hex=z.string().regex(/^(#[0-9a-fA-F]{6})?$/,'色は#RRGGBBで指定してください').default('');
-export const blockTypes=['heading','subheading','text','bullets','image','imageText','video','audio','button','form','countdown','progress','pdf','balloon','accordion','table','divider','spacer','html'] as const;
+export const blockTypes=['heading','subheading','text','bullets','image','imageText','video','audio','button','form','countdown','progress','pdf','balloon','accordion','table','divider','spacer','html','webinar'] as const;
 // One flat block shape for every element; fields a type does not use keep their defaults, so older pages still parse.
 export const blockSchema=z.object({id:z.string().min(1).max(100),type:z.enum(blockTypes),text:z.string().max(20000).default(''),url:safeLink.default(''),alt:z.string().max(300).default(''),align:z.enum(['left','center']).default('left'),tone:z.enum(['plain','soft','accent']).default('plain'),visibility:z.enum(['all','desktop','mobile']).default('all'),
  title:z.string().max(300).default(''),side:z.enum(['left','right']).default('left'),shape:z.enum(['square','rounded','circle']).default('rounded'),value:z.number().int().min(0).max(100).default(50),style:z.enum(['solid','stripe']).default('solid'),pdfMode:z.enum(['link','viewer']).default('link'),countdownMode:z.enum(['deadline','evergreen']).default('deadline'),hours:z.number().int().min(1).max(8760).default(24),redirectUrl:safeLink.default(''),height:z.number().int().min(80).max(3000).default(400),width:z.enum(['full','half']).default('full'),bg:hex,color:hex,size:z.enum(['s','m','l']).default('m'),animation:z.enum(['none','pulse','bounce']).default('none'),sticky:z.boolean().default(false),
  // UTAGE's ボタンの動作（要素の表示/ポップアップ）: a block can start hidden or live in a popup; a button reveals or opens it.
- reveal:z.enum(['always','hidden','popup']).default('always'),action:z.enum(['link','show','popup']).default('link'),target:z.string().max(100).default(''),chapters:z.string().max(5000).default('')});
+ reveal:z.enum(['always','hidden','popup']).default('always'),action:z.enum(['link','show','popup']).default('link'),target:z.string().max(100).default(''),chapters:z.string().max(5000).default(''),
+ // Auto-webinar: start times (Japan time, daily) and the video length.
+ times:z.string().max(200).regex(/^(|([01]\d|2[0-3]):[0-5]\d([,、\s]+([01]\d|2[0-3]):[0-5]\d)*)$/,'開始時刻は 12:00,20:00 の形で入力してください').default(''),duration:z.number().int().min(1).max(600).default(60)});
 // Extra form questions (UTAGE's 読者項目/フリー項目, 住所・電話). Answers are stored on the contact (and the order for purchases).
 export const formFieldTypes=['text','textarea','tel','postal','address','date','select','checkbox'] as const;
 export const formFieldSchema=z.object({key:z.string().regex(/^[a-z][a-z0-9_]{0,30}$/,'項目キーは英小文字で始まる英数字・_（31文字以内）です'),label:z.string().trim().min(1).max(100),type:z.enum(formFieldTypes).default('text'),required:z.boolean().default(false),options:z.string().max(2000).default('')});
@@ -25,3 +27,7 @@ export function imageKey(owner:string,url:string){try{const u=new URL(url,'https
 export function sniffImage(b:Uint8Array){const h=(...x:number[])=>x.every((v,i)=>b[i]===v);return h(0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a)?'image/png':h(0xff,0xd8,0xff)?'image/jpeg':h(0x47,0x49,0x46,0x38)?'image/gif':h(0x52,0x49,0x46,0x46)&&b[8]===0x57&&b[9]===0x45&&b[10]===0x42&&b[11]===0x50?'image/webp':null;}
 // Video chapters, one per line: "1:23 タイトル" or "1:02:03 タイトル".
 export function parseChapters(text:string){return text.split('\n').map(l=>l.trim().match(/^(?:(\d{1,2}):)?(\d{1,3}):([0-5]\d)\s+(.+)$/)).filter(Boolean).map(m=>({at:Number(m![1]||0)*3600+Number(m![2])*60+Number(m![3]),title:m![4].slice(0,100)})).slice(0,30);}
+// Auto-webinar slot (UTAGE's 自動ウェビナー): video plays as if live at fixed daily Japan-time starts; late viewers join mid-way.
+export function webinarSlot(times:string,durationMin:number,now:number){const starts=times.split(/[,、\s]+/).filter(Boolean).map(t=>{const [h,m]=t.split(':').map(Number);return h*60+m;}).sort((a,b)=>a-b);if(!starts.length)return null;const day=Math.floor((now+9*3600000)/86400000)*86400000-9*3600000;
+ for(const d of [-1,0,1])for(const m of starts){const start=day+d*86400000+m*60000;if(now>=start&&now<start+durationMin*60000)return {state:'live' as const,start,elapsed:Math.floor((now-start)/1000)};}
+ for(const d of [0,1])for(const m of starts){const start=day+d*86400000+m*60000;if(start>now)return {state:'waiting' as const,start,elapsed:0};}return null;}
