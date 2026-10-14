@@ -3,6 +3,7 @@ import {db,auditStatement} from './server';
 import {schemas,kinds} from './core';
 import {z} from 'zod';
 import {digest} from './auth';
+import {imageKey} from './page-schema';
 const order=z.object({productId:z.string(),contactId:z.string(),productName:z.string(),amount:z.number().int().nonnegative(),method:z.enum(['bank','card']),status:z.enum(['pending_bank','pending_card','paid','cancelled','revoked']),sessionId:z.string().nullable().optional(),buyer:z.string().optional(),pageId:z.string().optional(),termsVersion:z.number().optional()});
 const row=z.object({id:z.string().min(1).max(200),owner:z.string(),kind:z.string(),data:z.string(),version:z.number().int().positive(),created:z.number(),updated:z.number()});
 const job=z.object({id:z.string().min(1).max(500),owner:z.string(),contact_id:z.string(),campaign_id:z.string(),subject:z.string(),body:z.string(),category:z.enum(['marketing','transactional']),due:z.number(),status:z.enum(['queued','sending','sent','suppressed','failed','cancelled']),attempts:z.number().int().nonnegative(),error:z.string().nullable(),provider:z.string().nullable(),provider_id:z.string().nullable(),created:z.number()});
@@ -15,9 +16,9 @@ export async function createBackup(owner:string){
  const jobs=(await db().prepare('SELECT * FROM jobs WHERE owner=?').bind(owner).all()).results;
  const suppressions=(await db().prepare('SELECT email,reason,created FROM suppressions WHERE owner=?').bind(owner).all()).results;
  const prefix='backups/'+owner+'/'+Date.now()+'-'+crypto.randomUUID();
- const files:Snapshot['files']=[];const keys=new Set<string>();for(const r of records){if(r.kind==='products'){const d=JSON.parse(String(r.data));if(d.deliveryKey)keys.add(d.deliveryKey);}}
+ const files:Snapshot['files']=[];const keys=new Set<string>();for(const r of records){if(r.kind==='products'){const d=JSON.parse(String(r.data));if(d.deliveryKey)keys.add(d.deliveryKey);}if(r.kind==='pages')for(const b of JSON.parse(String(r.data)).blocks||[]){const k=b.type==='image'&&imageKey(owner,b.url||'');if(k)keys.add(k);}}
  if(keys.size>1000||records.length>10000||jobs.length>30000)throw Error('バックアップ上限を超えています。D1/R2の直接バックアップを使用してください');
- for(const key of keys){if(!key.startsWith(owner+'/'))throw Error('ファイルの所有者が異なります');const file=await env.BUCKET.get(key);if(!file)throw Error('納品ファイルが見つかりません: '+key);const copy=prefix+'/files/'+encodeURIComponent(key);const bytes=await file.arrayBuffer();const sha256=await fileHash(bytes);await env.BUCKET.put(copy,bytes,{httpMetadata:file.httpMetadata,customMetadata:file.customMetadata});files.push({key,copy,size:file.size,etag:file.etag,sha256});}
+ for(const key of keys){if(!key.startsWith(owner+'/'))throw Error('ファイルの所有者が異なります');const file=await env.BUCKET.get(key);if(!file&&key.startsWith(owner+'/images/'))continue;if(!file)throw Error('納品ファイルが見つかりません: '+key);const copy=prefix+'/files/'+encodeURIComponent(key);const bytes=await file.arrayBuffer();const sha256=await fileHash(bytes);await env.BUCKET.put(copy,bytes,{httpMetadata:file.httpMetadata,customMetadata:file.customMetadata});files.push({key,copy,size:file.size,etag:file.etag,sha256});}
  const snapshot=snapshotSchema.parse({format:'commerce-backup-v2',owner,created:Date.now(),records,jobs,files,suppressions});
  const key=prefix+'/manifest.json';await env.BUCKET.put(key,JSON.stringify(snapshot),{httpMetadata:{contentType:'application/json'}});await auditStatement(owner,'backup:create',key).run();return {key,snapshot};
 }
@@ -39,7 +40,7 @@ export async function restoreBackup(owner:string,value:unknown,confirmHash?:stri
  const currentLine=(await db().prepare("SELECT * FROM records WHERE owner=? AND kind='lineContacts'").bind(owner).all<any>()).results;
  const mapped=s.records.map(r=>{const d=JSON.parse(r.data);if(r.kind==='lineContacts'){const current=currentLine.find(c=>c.id===r.id);const live=current?JSON.parse(current.data):null;if(live&&live.eventAt>=(d.eventAt||0)){d.status=live.status;d.eventAt=live.eventAt;}}if(d.deliveryKey){const f=s.files.find(f=>f.key===d.deliveryKey)!;d.deliveryKey=owner+'/restored/'+hash+'/'+encodeURIComponent(f.key);}return {...r,data:JSON.stringify(d),version:r.version+1,updated:Date.now()};});
  for(const r of currentLine){const d=JSON.parse(r.data);if(d.status==='unsubscribed'&&!mapped.some(m=>m.id===r.id))mapped.push({...r,data:JSON.stringify({...d,contactId:''})});}
- for(const f of s.files){const file=await env.BUCKET.get(f.copy);if(!file)throw Error('ファイルを取得できません');await env.BUCKET.put(owner+'/restored/'+hash+'/'+encodeURIComponent(f.key),file.body,{httpMetadata:file.httpMetadata,customMetadata:file.customMetadata});}
+ for(const f of s.files){const file=await env.BUCKET.get(f.copy);if(!file)throw Error('ファイルを取得できません');await env.BUCKET.put(f.key.startsWith(owner+'/images/')?f.key:owner+'/restored/'+hash+'/'+encodeURIComponent(f.key),file.body,{httpMetadata:file.httpMetadata,customMetadata:file.customMetadata});}
  const restoredJobs=s.jobs.map(j=>['queued','sending'].includes(j.status)?{...j,status:'cancelled',error:'復元時に重複配信防止のため停止'}:j);
  await db().batch([
  db().prepare('DELETE FROM jobs WHERE owner=?').bind(owner),db().prepare('DELETE FROM records WHERE owner=?').bind(owner),

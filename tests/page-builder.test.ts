@@ -1,0 +1,8 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {blockSchema,imageKey,imageUrl,sniffImage} from '../lib/page-schema.ts';
+const id='0f8fad5b-d9cb-469f-a165-70867728950e';
+test('blocks saved before rc.3 default to all devices; unknown visibility is rejected',()=>{assert.equal(blockSchema.parse({id:'b',type:'text'}).visibility,'all');assert.equal(blockSchema.parse({id:'b',type:'text',visibility:'mobile'}).visibility,'mobile');assert.equal(blockSchema.safeParse({id:'b',type:'text',visibility:'tablet'}).success,false);});
+test('uploaded image URLs pass the block link rules and map only to the owner image prefix',()=>{const url=imageUrl('store',id+'.png');assert.equal(blockSchema.parse({id:'b',type:'image',url}).url,url);assert.equal(imageKey('store',url),'store/images/'+id+'.png');
+ for(const bad of [imageUrl('other',id+'.png'),'/api/assets?o=store&image=../secret.pdf','/api/assets?o=store&image='+id+'.svg','/api/assets?o=store&image='+id+'/file.pdf','https://evil.test/api/assets?o=store&image='+id+'.png','/api/download?o=store&image='+id+'.png'])assert.equal(imageKey('store',bad),null,bad);});
+test('image uploads are typed by magic bytes, not by name or declared type',()=>{assert.equal(sniffImage(new Uint8Array([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,0])),'image/png');assert.equal(sniffImage(new Uint8Array([0xff,0xd8,0xff,0xe0])),'image/jpeg');assert.equal(sniffImage(new Uint8Array([0x47,0x49,0x46,0x38,0x39,0x61])),'image/gif');assert.equal(sniffImage(new Uint8Array([0x52,0x49,0x46,0x46,0,0,0,0,0x57,0x45,0x42,0x50])),'image/webp');assert.equal(sniffImage(new TextEncoder().encode('<svg onload=alert(1)>')),null);assert.equal(sniffImage(new TextEncoder().encode('<html>')),null);});
