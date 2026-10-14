@@ -91,7 +91,7 @@ pnpm exec wrangler secret put STRIPE_SECRET_KEY --config wrangler.standalone.jso
 pnpm exec wrangler secret put STRIPE_WEBHOOK_SECRET --config wrangler.standalone.json
 ```
 
-StripeのWebhook送信先は `https://自分の公開URL/api/stripe`。イベントは `checkout.session.completed` と `checkout.session.async_payment_succeeded`。テスト環境と本番環境のWebhook署名キーを混同しないでください。
+StripeのWebhook送信先は `https://自分の公開URL/api/stripe`。イベントは `checkout.session.completed`・`checkout.session.async_payment_succeeded`・`payment_intent.succeeded`（アップセル）・`invoice.paid`・`invoice.payment_failed`・`customer.subscription.deleted`（継続課金・分割）。詳細は docs/PAYMENTS.md。テスト環境と本番環境のWebhook署名キーを混同しないでください。
 
 `COMMERCE_ENABLED=true` にしてテスト用商品でRELEASE-CHECKLIST.mdを実施します。この設定は銀行振込の受付にも必要です。テスト終了後に実商品・本番キーに切り替えます。
 

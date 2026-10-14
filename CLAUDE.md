@@ -1,6 +1,6 @@
 # Akinai hub — Claude開発引き継ぎ
 
-基準日: 2026-10-14 JST / 1.0.0-rc.2
+基準日: 2026-10-14 JST / 1.0.0-rc.3（rc.2エクスポートからの変更は docs/CHANGES-2026-10-14-claude*.md）
 基準ソースコミット: 2295e8dd8b4ff587d7b41e089b30ba56db695041
 この一式は独立ホスティング版の開発用エクスポート。実装済みをゼロから作り直さず、ソースを確認して改善を進めること。
 
@@ -43,7 +43,19 @@ Vinext 1.0.0-beta.5 / React 19 / TypeScript / Vite 8 / Cloudflare Workers + D1 +
 - R2の納品ファイルも含めたバックアップ・復元。復元時の未送信キュー停止、新しいLINEブロック状態を保持。
 - 導入ウィザード、チェックリスト、運用・移行資料、Tips販売文のたたき台。
 
-## 2026-10-14 Claude作業（docs/CHANGES-2026-10-14-claude.md）
+## 2026-10-14 Claude 第2回（rc.3、docs/CHANGES-2026-10-14-claude-2.md）
+
+ユーザー決定：会員サイトは greed-learning（別リポジトリ）と連携。購入者の登録・認証はAkinai hub側。買い切りで、更新は自動で受け取れる形、サポートはほぼなし。実装順は A 認証 → B HTMLメール → C 決済 → D ファネル。
+
+- A：OIDCプロバイダー（PKCE・RS256）、購入一覧/商品一覧API、購入・停止の署名Webhook。ライセンス（自動/手動発行、設置先上限、更新期間）と署名付きリリース配布、`pnpm run update`。greed-learning側は同名ブランチで「Akinai hubでログイン」・Webhook受信・講座と商品の紐づけ。
+- B：HTMLメール（ブロック/直接）、差し込み、開封・クリック計測、クリックでタグ、開封/クリック条件。
+- C：継続課金・分割・無料お試し、オーダーバンプ、ワンクリックアップセル、クーポン、購入者の解約。
+- D：訪問者Cookie、ページ計測、登録経路（?ref=）/UTM、A/Bテスト、分析タブ。
+- E：UTAGEのページ要素（サブ見出し、箇条書き、画像＋テキスト、音声、プログレス、PDF、吹き出し、FAQ、表、隔離カスタムHTML、人ごとのカウントダウン）、2列・装飾、SEO/OGP、GA4/Metaピクセル、カスタムCSS、閲覧パスワード、期限後の移動先。
+- DB追加：drizzle/0007（jobs.html・mail_events）、0008（page_views・conversions）。
+- 検証：型検査、単体48、統合80、ブラウザQA 25。外部は全てモック。
+
+## 2026-10-14 Claude 第1回（docs/CHANGES-2026-10-14-claude.md）
 
 - pnpm 11のfrozen install失敗を修正（pnpm-workspace.yaml）。
 - ブラウザQAの仕組み（tests/qa-server.mjs・tests/browser-qa.mjs、`pnpm run test:browser`）。PC/スマホ相当のChromiumで21項目。不具合3件を修正。
@@ -54,27 +66,31 @@ Vinext 1.0.0-beta.5 / React 19 / TypeScript / Vite 8 / Cloudflare Workers + D1 +
 ## 優先して進める残作業
 
 1. ~~ブラウザでPC/スマホの実操作を検証~~ → ローカルChromium（PC/スマホエミュレーション、外部モック）では2026-10-14に実施済み。残りは実機スマホ・Safari・実ドメインでの確認。
+1-2. rc.3の新機能の実接続確認：Stripeテストモード（継続課金・分割・オフセッション決済・Webhook各イベント）、greed-learningとのOIDC/Webhook、メールの開封・クリック計測、リリース署名→更新適用を実環境で一度通す。
 2. 独立Cloudflare環境で新規セットアップを通す。メール実到達、Stripeテストモード、LINE実アカウントでWebhook/配信/ブロックを確認。キーは安全な経路でユーザーが設定し、架空の接続完了を報告しない。
 3. ~~暖簾ロゴのベクター化と適用~~ → 2026-10-14に適用済み。ユーザーによる形の確認、文字のアウトライン化とデザイナーによる最終調整が残り。
 4. ~~ページビルダーの操作性拡張~~ → テンプレート・画像アップロード・複製・ドラッグ・ブロック単位の端末別表示は2026-10-14に実装済み。残りは端末別の細部スタイル、アップロード画像の一覧・削除UI。
-5. 必要に応じてファネル俯瞰図と条件分岐UI、LINEリッチメニュー/Flex等へ拡張。現在は複雑な分岐ツリーではない。
+5. 残るUTAGE機能：イベント・予約、パートナー（アフィリエイト）、LINEリッチメニュー/Flex/個別チャット、自動ウェビナー、ボタンのポップアップ/表示切替、セクション/行の多段レイアウト、ファネル俯瞰図、メールA/B、配信条件のAND/OR、継続課金失敗の管理者通知、日別グラフ（docs/UTAGE-FEATURES.md）。
 6. UTAGEの原本保全→件数/ハッシュ/対応表→変換可能性の検証。HTMLメールや固定時刻ステップ、差し込み、複雑な分岐を黙ってテキスト・時間差へ劣化変換しない。
-7. 買い切り販売条件、ライセンス、更新・サポート・返金、Tips購入後の受渡しをユーザーと確定。
+7. 買い切り販売条件（価格・返金・設置先数・更新期間の既定値・譲渡可否）とライセンス条項をユーザーと確定。Tips購入者へは「ライセンスを手動発行」で受け渡す運用（docs/LICENSE-UPDATES.md）。サポートは「ほぼなし」の方針を販売ページと規約に明記。
 
 ## 重要な制約
 
 - 「UTAGE完全互換」「完成品」「本番検証済み」とは呼ばない。rc.2はリリース候補。
 - LINEは1公式アカウント、テキストのみ。購入条件には顧客連携が必要。既存友だち全件取得、LINE Login/LIFFワンタップ連携、チャット返信管理はない。
-- ブロック式ページ編集。自由配置、分岐ツリー、A/B、HTMLメール、開封クリック分岐、任意フォーム項目、セッション別カウントダウン、サブスク決済、アフィ管理は未実装。
+- ブロック式ページ編集（全幅＋2列）。自由配置、分岐ツリー、任意フォーム項目、アフィ管理、イベント予約は未実装。A/B、HTMLメール、開封クリック条件、人ごとのカウントダウン、サブスク・分割はrc.3で実装（実接続未確認）。
 - キュー作成後の本文・日時・ステップ・チャネル変更は禁止し、別の配信として作成。状態・条件は更新可。失敗や結果不明の送信を勝手に再送しない。
 - メール・LINE各10件/5分が基本。大量配信には容量設計の追加が必要。
 - 外部画像/動画はURLのみ保管。動画本体やDRMはない。
 - 認証、所有者分離、メール同意/停止、LINEブロック、入金済み納品、Webhook署名、二重配信防止を拡張時も維持する。
+- `AUTH_SECRET` からクライアントシークレット・Webhook署名・ライセンスキーを導出している。変更すると全て変わる。
+- カスタムHTMLは隔離iframe（allow-same-origin禁止）でのみ表示する。計測タグはID形式を検証した固定スニペットのみ。任意JSを同一オリジンに出さない。
+- 署名済みZIP以外の更新は適用しない（update.mjs）。リリース秘密鍵 release-signing-key.txt をリポジトリ・ZIPに入れない。
 - 実メール配信・決済・公開先変更は、対象とテスト/本番を区別して実施。既存データを初期化しない。
 
 ## 検証状況
 
-2026-10-14時点：型検査、単体27、独立版統合43、ブラウザQA 21（Chromium・外部モック）。frozen installはクリーン状態から成功。以下はrc.2基準版の記録。基準版は型検査・独立版/Sites版ビルド成功。単体24、独立版統合40、Sites版統合21の合計85項目。外部APIは全てモック。rc.2 ZIPのCRC/SHA-256照合済み。rc.2の新規オンライン依存インストールと購入者実機導入は未検証。
+2026-10-14（rc.3）時点：型検査、単体48、独立版統合80、ブラウザQA 25（Chromium・外部モック）。greed-learningは型検査・vitest 146・lint・build。第1回時点：単体27、統合43、ブラウザQA 21。frozen installはクリーン状態から成功。以下はrc.2基準版の記録。基準版は型検査・独立版/Sites版ビルド成功。単体24、独立版統合40、Sites版統合21の合計85項目。外部APIは全てモック。rc.2 ZIPのCRC/SHA-256照合済み。rc.2の新規オンライン依存インストールと購入者実機導入は未検証。
 
 ## 並行開発
 
@@ -88,5 +104,8 @@ lib/core.ts・page-schema.ts:入力定義 / lib/server.ts:所有者別CRUDと注
 lib/auth.ts:認証 / lib/automation.ts・mail.ts・line.ts:配信と連携
 lib/mail-providers.ts・mail-events.ts:各メールサービス / lib/line-protocol.ts:LINEプロトコル
 lib/checkout.ts・app/api/stripe:決済 / lib/backup.ts:保存復元
-build/standalone-worker.ts:独立版Worker / db/schema.ts・drizzle/:DB
+build/standalone-worker.ts:独立版Worker（/.well-known転送・訪問者Cookie） / db/schema.ts・drizzle/:DB
+lib/oidc.ts・webhooks.ts・jwt.ts:会員サイト連携 / lib/licenses.ts・scripts/release/:ライセンスと更新配布
+lib/mail-html.ts・tracking.ts:HTMLメールと計測 / lib/billing.ts・pricing.ts:決済拡張 / lib/analytics.ts・ab.ts:分析とA/B
+app/integrations-panel.tsx・mail-editor.tsx・analytics-panel.tsx・block-fields.tsx:管理UI追加分
 HANDOFF-INVENTORY.sha256.json:この一式の全ファイルハッシュ
