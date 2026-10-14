@@ -39,3 +39,6 @@
 `checkout.session.completed` / `checkout.session.async_payment_succeeded` / `payment_intent.succeeded` / `invoice.paid` / `invoice.payment_failed` / `customer.subscription.deleted`
 
 同じイベントの再送は無視し、金額・通貨・セッションIDが注文と一致しないものは拒否します。
+
+## 支払い失敗の通知（第3回）
+継続課金・分割払いの請求失敗（Stripe `invoice.payment_failed`）は、管理画面の「運営のお知らせ」に1回だけ表示し、メール送信が有効なら管理者のメールアドレスにも送ります（同じイベントの再送では重複しません。送信失敗は記録のみで自動再送しません）。

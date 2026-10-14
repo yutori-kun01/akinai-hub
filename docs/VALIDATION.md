@@ -1,6 +1,9 @@
 # 検証結果 — 2026-10-14 / 1.0.0-rc.3
 
-## 2026-10-14 Claude 第2回（rc.3、最新）
+## 2026-10-14 Claude 第3回（rc.3の続き、最新）
+詳細は CHANGES-2026-10-14-claude-3.md。型検査・単体58・独立版ビルド・統合91・ブラウザQA 29 すべて成功（外部サービスはモック）。実LINE・実メール・Stripeテストモード・実ドメインは未確認。
+
+## 2026-10-14 Claude 第2回（rc.3）
 詳細は CHANGES-2026-10-14-claude-2.md。
 - 型検査、単体48件、独立版ビルド、独立版統合80件、ブラウザQA 25件（コンソールエラー0）。greed-learning側は型検査・vitest 146件・lint・next build。
 - 外部APIはすべてモック。実Cloudflare・実ドメイン・実メール・Stripeテストモード・LINE実機・greed-learningとの実接続は未確認。
