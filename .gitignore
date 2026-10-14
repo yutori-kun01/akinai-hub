@@ -8,3 +8,6 @@ wrangler.standalone.json
 qa-output/
 .next/
 next-env.d.ts
+.akinai-update-backup/
+release-signing-key.txt
+/release/

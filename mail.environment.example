@@ -38,3 +38,12 @@ POSTMARK_WEBHOOK_PASSWORD=
 LINE_CHANNEL_ACCESS_TOKEN=
 LINE_CHANNEL_SECRET=
 LINE_ENABLED=false
+
+# Member-site login (OIDC) uses PUBLIC_ORIGIN and AUTH_SECRET above. Changing AUTH_SECRET invalidates
+# every client secret, webhook signature and license key derived from it.
+
+# Selling licenses (seller's install only): public half of the release signing key (pnpm run release:keygen)
+RELEASE_PUBLIC_KEY=
+# Receiving updates (buyer's install): the key shown in the seller's purchase library, and the seller's URL
+LICENSE_KEY=
+LICENSE_SERVER=

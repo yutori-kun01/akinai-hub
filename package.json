@@ -1,6 +1,6 @@
 {
   "name": "akinai-hub",
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0-rc.3",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -13,10 +13,14 @@
     "deploy:standalone": "wrangler deploy --config dist/server/wrangler.json",
     "db:migrate:standalone": "wrangler d1 migrations apply DB --remote --config wrangler.standalone.json",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/core.test.ts tests/mail-providers.test.ts tests/mail-events.test.ts tests/funnel-line.test.ts tests/page-builder.test.ts",
+    "test": "node --experimental-strip-types --test tests/core.test.ts tests/mail-providers.test.ts tests/mail-events.test.ts tests/funnel-line.test.ts tests/page-builder.test.ts tests/integrations.test.ts tests/release-zip.test.ts",
     "test:integration": "node tests/standalone-integration.mjs",
     "qa:server": "node tests/qa-server.mjs",
-    "test:browser": "node tests/browser-qa.mjs"
+    "test:browser": "node tests/browser-qa.mjs",
+    "release:keygen": "node scripts/release/keygen.mjs",
+    "release:package": "node scripts/release/package.mjs",
+    "release:sign": "node scripts/release/sign.mjs",
+    "update": "node scripts/release/update.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

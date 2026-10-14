@@ -1,0 +1,3 @@
+import {authenticateClient,entitlements,subjectOf,oidcEnabled,oauthError,json} from '@/lib/oidc';
+// Server-to-server reconciliation for member sites: Basic client auth, one email per call.
+export async function GET(req:Request){if(!oidcEnabled())return oauthError('not_configured',404);let app;try{app=await authenticateClient(req);}catch{return oauthError('invalid_client',401);}const email=(new URL(req.url).searchParams.get('email')||'').trim().toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return oauthError('invalid_request');return json({sub:await subjectOf(email),email,entitlements:await entitlements(email,app)});}

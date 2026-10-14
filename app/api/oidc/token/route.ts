@@ -1,0 +1,4 @@
+import {authenticateClient,consumeCode,checkPkce,tokens,oidcEnabled,oauthError,json} from '@/lib/oidc';
+export async function POST(req:Request){if(!oidcEnabled())return oauthError('not_configured',404);try{if(!(req.headers.get('content-type')||'').includes('application/x-www-form-urlencoded'))return oauthError('invalid_request');const raw=await req.text();if(raw.length>5000)return oauthError('invalid_request');const form=new URLSearchParams(raw);let app;try{app=await authenticateClient(req,form);}catch{return oauthError('invalid_client',401);}
+ if(form.get('grant_type')!=='authorization_code')return oauthError('unsupported_grant_type');const grant=await consumeCode(form.get('code')||'');if(!grant||grant.clientId!==app.clientId||grant.redirectUri!==form.get('redirect_uri')||!await checkPkce(form.get('code_verifier')||'',grant.challenge))return oauthError('invalid_grant');
+ return json(await tokens(app,grant));}catch{return oauthError('server_error',500);}}

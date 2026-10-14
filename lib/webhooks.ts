@@ -1,0 +1,20 @@
+import {db,get,auditStatement} from './server';
+import {clientSecret} from './oidc';
+import {hmacHex} from './jwt';
+// Outgoing entitlement webhooks for member sites. Jobs only carry ids; the payload is rebuilt from the current order at send time,
+// so a late retry of "granted" after a revoke reports the current state instead of re-granting. Receivers must upsert by orderId.
+export async function enqueueEntitlementEvents(owner:string,all:any[]){let queued=0;const apps=all.filter(a=>a.kind==='apps'&&a.status==='active'&&a.webhookUrl);if(!apps.length)return 0;const now=Date.now();
+ for(const o of all.filter(r=>r.kind==='orders'&&['paid','revoked'].includes(r.status)))for(const app of apps){if(app.productIds?.length&&!app.productIds.includes(o.productId))continue;const r=await db().prepare('INSERT OR IGNORE INTO jobs(id,owner,contact_id,campaign_id,subject,body,category,provider,due,status,created) VALUES(?,?,?,?,?,?,?,?,?,?,?)').bind('hook:'+app.id+':'+o.id+':'+o.status,owner,o.contactId,app.id,'entitlement.'+(o.status==='paid'?'granted':'revoked'),JSON.stringify({orderId:o.id}),'transactional','webhook',now,'queued',now).run();queued+=r.meta.changes||0;}
+ return queued;}
+export async function signedHeaders(secret:string,body:string,id:string,now=Date.now()){const t=Math.floor(now/1000);return {'Content-Type':'application/json','Akinai-Event-Id':id,'Akinai-Signature':'t='+t+',v1='+await hmacHex(secret,t+'.'+body)};}
+export async function processWebhooks(owner:string){const jobs=(await db().prepare("SELECT * FROM jobs WHERE owner=? AND provider='webhook' AND status='queued' AND due<=? ORDER BY due LIMIT 25").bind(owner,Date.now()).all<Record<string,any>>()).results;let hooksSent=0,hooksFailed=0;
+ for(const j of jobs){const claim=await db().prepare("UPDATE jobs SET status='sending',started=?,attempts=attempts+1 WHERE id=? AND owner=? AND status='queued'").bind(Date.now(),j.id,owner).run();if(!claim.meta.changes)continue;
+  const app=await get(owner,j.campaign_id);const {orderId}=JSON.parse(j.body);const o=await get(owner,orderId);const c=o?await get(owner,o.contactId):null;
+  if(app?.kind!=='apps'||app.status!=='active'||!app.webhookUrl||o?.kind!=='orders'||!c){await db().prepare("UPDATE jobs SET status='suppressed' WHERE id=? AND owner=?").bind(j.id,owner).run();continue;}
+  const body=JSON.stringify({id:j.id,type:o.status==='paid'?'entitlement.granted':'entitlement.revoked',created:new Date().toISOString(),data:{email:c.email,name:c.name,orderId:o.id,productId:o.productId,productName:o.productName,status:o.status==='paid'?'active':'revoked'}});
+  let ok=false,detail='';try{const r=await fetch(app.webhookUrl,{method:'POST',headers:await signedHeaders(await clientSecret(app),body,j.id),body,redirect:'manual',signal:AbortSignal.timeout(10000)});ok=r.status>=200&&r.status<300;detail='HTTP '+r.status;}catch(e){detail=e instanceof Error?e.name:'network';}
+  if(ok){await db().prepare("UPDATE jobs SET status='sent',provider_id=?,error=NULL WHERE id=? AND owner=?").bind(detail,j.id,owner).run();hooksSent++;continue;}
+  // Machine-to-machine and idempotent on the receiver, so retries are safe: 2,4,8,16,32 minutes, then stop and show it in the queue.
+  const attempts=(j.attempts||0)+1;await db().prepare("UPDATE jobs SET status=?,due=?,error=? WHERE id=? AND owner=?").bind(attempts>=6?'failed':'queued',Date.now()+2**attempts*60000,'Webhook送信失敗（'+detail+'）'+(attempts>=6?'。再送を停止しました':'。自動再試行します'),j.id,owner).run();hooksFailed++;}
+ if(jobs.length)await auditStatement(owner,'webhook:processed',String(hooksSent)).run();return {hooksSent,hooksFailed};}
+

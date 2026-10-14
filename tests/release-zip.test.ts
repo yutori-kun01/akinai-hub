@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync,existsSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {deflateRawSync} from 'node:zlib';
+// @ts-ignore plain ESM helper shared with scripts/release/update.mjs
+import {unzip} from '../scripts/release/zip.mjs';
+function zipOf(entries:[string,Buffer][]){const chunks:Buffer[]=[],central:Buffer[]=[];let offset=0;for(const [n,raw] of entries){const name=Buffer.from(n),data=deflateRawSync(raw);const h=Buffer.alloc(30);h.writeUInt32LE(0x04034b50);h.writeUInt16LE(8,8);h.writeUInt32LE(data.length,18);h.writeUInt32LE(raw.length,22);h.writeUInt16LE(name.length,26);chunks.push(h,name,data);const c=Buffer.alloc(46);c.writeUInt32LE(0x02014b50);c.writeUInt16LE(8,10);c.writeUInt32LE(data.length,20);c.writeUInt32LE(raw.length,24);c.writeUInt16LE(name.length,28);c.writeUInt32LE(offset,42);central.push(c,name);offset+=30+name.length+data.length;}const cd=Buffer.concat(central),end=Buffer.alloc(22);end.writeUInt32LE(0x06054b50);end.writeUInt16LE(entries.length,8);end.writeUInt16LE(entries.length,10);end.writeUInt32LE(cd.length,12);end.writeUInt32LE(offset,16);return Buffer.concat([...chunks,cd,end]);}
+test('Update unzip reads the packaged release and matches its inventory',()=>{const version=JSON.parse(readFileSync('package.json','utf8')).version;const path='release/akinai-hub-'+version+'.zip';if(!existsSync(path))execFileSync(process.execPath,['scripts/release/package.mjs']);const files=unzip(readFileSync(path));const inventory=JSON.parse(files.get('FILES.sha256.json').toString());assert.ok(inventory.length>50);for(const f of inventory)assert.equal(createHash('sha256').update(files.get(f.path)).digest('hex'),f.sha256,f.path);assert.ok(!files.has('wrangler.standalone.json'));assert.ok(!files.has('release-signing-key.txt'));});
+test('Update unzip refuses path traversal',()=>{assert.throws(()=>unzip(zipOf([['akinai-hub/../evil.js',Buffer.from('x')]])),/不正なパス/);assert.throws(()=>unzip(zipOf([['/etc/passwd',Buffer.from('x')]])),/不正なパス/);assert.equal(unzip(zipOf([['akinai-hub/lib/a.ts',Buffer.from('ok')]])).get('lib/a.ts').toString(),'ok');});
