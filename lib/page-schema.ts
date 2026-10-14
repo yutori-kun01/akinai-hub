@@ -12,7 +12,7 @@ export const blockSchema=z.object({id:z.string().min(1).max(100),type:z.enum(blo
  // Shown only while an auto-webinar on the page is live and has played this many minutes (0 = always).
  showAt:z.number().int().min(0).max(600).default(0),
  // Button image (replaces the text button) and a short icon/emoji before the label.
- src:safeLink.default(''),icon:z.string().max(4).default(''),sizeMobile:z.enum(['','s','m','l']).default(''),
+ src:safeLink.default(''),icon:z.string().max(4).default(''),sizeMobile:z.enum(['','s','m','l']).default(''),href:safeLink.default(''),
  // Comments: approve before showing (true) or show at once.
  moderate:z.boolean().default(true)});
 // Extra form questions (UTAGE's 読者項目/フリー項目, 住所・電話). Answers are stored on the contact (and the order for purchases).
@@ -41,3 +41,8 @@ export function webinarSlot(times:string,durationMin:number,now:number){const st
 // (YYYY-MM-DD, Japan time) or +N (N days after this browser first opened the page).
 export function parseVideoMenu(text:string){return text.split('\n').map(l=>l.trim()).filter(Boolean).slice(0,20).map(l=>{const [title,url='',open='']=l.split('|').map(x=>x.trim());const date=/^\d{4}-\d{2}-\d{2}$/.test(open)?Date.parse(open+'T00:00:00+09:00'):null;const days=/^\+\d{1,3}$/.test(open)?Number(open.slice(1)):null;return {title:title.slice(0,100),url,date,days};});}
 export function episodeOpen(e:{date:number|null;days:number|null},first:number,now:number){if(e.date!==null)return now>=e.date;if(e.days!==null)return now>=first+e.days*86400000;return true;}
+// Inline formatting for text blocks: **bold**, __underline__, [label](https://…) and bare https links. Returns plain
+// segments; the page renders them as React elements, so nothing here is ever inserted as raw HTML.
+export type Inline={t:'text'|'b'|'u'|'a';s:string;href?:string};
+export function inlineParts(text:string):Inline[]{const out:Inline[]=[];const re=/\*\*([^*\n]{1,500})\*\*|__([^_\n]{1,500})__|\[([^\]\n]{1,200})\]\((https:\/\/[^\s)]{1,1000}|\/[a-zA-Z0-9][^\s)]{0,999}|#[a-zA-Z][\w-]{0,60})\)|(https:\/\/[^\s<>()「」]{1,1000})/g;let last=0,m:RegExpExecArray|null;
+ while((m=re.exec(text))){if(m.index>last)out.push({t:'text',s:text.slice(last,m.index)});if(m[1])out.push({t:'b',s:m[1]});else if(m[2])out.push({t:'u',s:m[2]});else if(m[3])out.push({t:'a',s:m[3],href:m[4]});else out.push({t:'a',s:m[5],href:m[5]});last=re.lastIndex;}if(last<text.length)out.push({t:'text',s:text.slice(last)});return out;}

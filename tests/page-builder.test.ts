@@ -58,3 +58,8 @@ test('funnel JSON keeps links by index and imports with fresh slugs',()=>{
  const plan=planImport(ex,new Set(['sales','up']));assert.deepEqual(plan.pages.map((p:any)=>p.page.slug),['sales-2','up-2','thanks']);assert.deepEqual(plan.pages[1].links,{nextPageId:2,declinePageId:2,bumpThanksPageId:-1});
  assert.throws(()=>planImport({format:'other'},new Set()),/akinai-funnel-v1/);
 });
+import {inlineParts} from '../lib/page-schema.ts';
+test('inline text formatting yields plain segments only',()=>{
+ assert.deepEqual(inlineParts('a **b** __c__ [d](https://x.test/e) https://f.test <i>'),[{t:'text',s:'a '},{t:'b',s:'b'},{t:'text',s:' '},{t:'u',s:'c'},{t:'text',s:' '},{t:'a',s:'d',href:'https://x.test/e'},{t:'text',s:' '},{t:'a',s:'https://f.test',href:'https://f.test'},{t:'text',s:' <i>'}]);
+ assert.deepEqual(inlineParts('[x](javascript:alert(1))'),[{t:'text',s:'[x](javascript:alert(1))'}]);
+});
