@@ -56,3 +56,8 @@ ZOOM_CLIENT_SECRET=
 # LINEログイン（任意・ワンタップ連携）。Messaging APIと同じプロバイダーのLINEログインチャネル。コールバックURL: <公開URL>/api/line/login
 LINE_LOGIN_CHANNEL_ID=
 LINE_LOGIN_CHANNEL_SECRET=
+
+# Googleカレンダー（任意・イベント予約をカレンダーに登録）。サービスアカウントと、そのアカウントに「予定の変更」権限で共有したカレンダー
+GOOGLE_SERVICE_ACCOUNT_EMAIL=
+GOOGLE_PRIVATE_KEY=
+GOOGLE_CALENDAR_ID=
