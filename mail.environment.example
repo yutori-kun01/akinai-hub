@@ -52,3 +52,7 @@ LICENSE_SERVER=
 ZOOM_ACCOUNT_ID=
 ZOOM_CLIENT_ID=
 ZOOM_CLIENT_SECRET=
+
+# LINEログイン（任意・ワンタップ連携）。Messaging APIと同じプロバイダーのLINEログインチャネル。コールバックURL: <公開URL>/api/line/login
+LINE_LOGIN_CHANNEL_ID=
+LINE_LOGIN_CHANNEL_SECRET=
