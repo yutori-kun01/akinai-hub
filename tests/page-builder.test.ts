@@ -10,3 +10,14 @@ import {blockSchema as newBlockSchema,pageExtras as extras,blockTypes} from '../
 import {z as zz} from 'zod';
 test('New page elements parse with defaults and keep older blocks valid',()=>{for(const type of blockTypes){const b=newBlockSchema.parse({id:'x',type});assert.equal(b.width,'full');assert.equal(b.sticky,false);}const old=newBlockSchema.parse({id:'o',type:'heading',text:'h',url:'',alt:'',align:'left',tone:'plain'});assert.equal(old.visibility,'all');assert.equal(old.countdownMode,'deadline');assert.equal(newBlockSchema.safeParse({id:'c',type:'text',bg:'red'}).success,false);assert.equal(newBlockSchema.safeParse({id:'c',type:'audio',url:'javascript:alert(1)'}).success,false);assert.equal(newBlockSchema.safeParse({id:'c',type:'progress',value:120}).success,false);});
 test('Page settings validate tracking IDs and links',()=>{const p=zz.object(extras);assert.equal(p.safeParse({ga4Id:'G-ABC123XYZ'}).success,true);assert.equal(p.safeParse({ga4Id:"G-1');alert(1)//"}).success,false);assert.equal(p.safeParse({metaPixelId:'12345678901'}).success,true);assert.equal(p.safeParse({metaPixelId:'1;alert(1)'}).success,false);assert.equal(p.safeParse({expiredUrl:'javascript:alert(1)'}).success,false);assert.equal(p.safeParse({ogImage:'/api/assets?o=store&image=x.png'}).success,true);});
+import {buildFunnels} from '../lib/funnel-map.ts';
+test('funnel map follows next/yes/no links and opt-in tags, without loops',()=>{
+ const pages=[{id:'o',pageType:'optin',signupTag:'lead',nextPageId:'t1'},{id:'s',pageType:'sales',nextPageId:'u',bumpProductId:'b',bumpThanksPageId:'t2'},{id:'u',pageType:'upsell',nextPageId:'t1',declinePageId:'d'},{id:'d',pageType:'upsell',nextPageId:'u'},{id:'t1',pageType:'thanks'},{id:'t2',pageType:'thanks'},{id:'v',pageType:'sales',abParentId:'s'},{id:'x',pageType:'thanks'}];
+ const {roots,loose}=buildFunnels(pages,[{id:'q',tag:'lead'},{id:'r',tag:'other'}]);
+ assert.deepEqual(roots.map(r=>r.page?.id),['o','s']);
+ assert.deepEqual(roots[0].children.map(c=>[c.kind,c.node.page?.id||c.node.sequence?.id]),[['tag','q'],['next','t1']]);
+ const up=roots[1].children[0];assert.equal(up.node.page?.id,'u');assert.deepEqual(up.node.children.map(c=>[c.kind,c.node.page?.id]),[['yes','t1'],['no','d']]);
+ assert.equal(up.node.children[1].node.children.length,0); // d → u would loop back, so it stops
+ assert.deepEqual(roots[1].children.map(c=>c.kind),['next','bump']);
+ assert.deepEqual(loose.map(p=>p.id),['x']);
+});
