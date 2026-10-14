@@ -1,0 +1,5 @@
+import {z} from 'zod';
+import {get,input,response,fail} from '@/lib/server';
+import {checkOrigin,limited,standalone,workspace,equal} from '@/lib/auth';
+import {unlockToken,unlockCookie} from '@/lib/page-access';
+export async function POST(req:Request){try{checkOrigin(req);await limited('unlock:'+(req.headers.get('cf-connecting-ip')||'local'),10,10);const b=z.object({owner:z.string().max(150),pageId:z.string().max(100),password:z.string().max(100)}).parse(await input(req));if(standalone()&&b.owner!==workspace())throw Error('ページがありません');const page=await get(b.owner,b.pageId);if(page?.kind!=='pages'||page.status!=='published'||!page.password||!equal(page.password,b.password))throw Error('パスワードが違います');return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json','Cache-Control':'no-store','Set-Cookie':unlockCookie(page.id)+'='+await unlockToken(page)+'; Path=/shop/; Max-Age=7200; HttpOnly; SameSite=Lax'+(new URL(req.url).protocol==='https:'?'; Secure':'')}});}catch(e){return fail(e);}}
