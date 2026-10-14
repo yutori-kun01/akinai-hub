@@ -1,0 +1,9 @@
+# pnpm 11 reads overrides / build approvals here (package.json "overrides" is npm-only).
+overrides:
+  miniflare>sharp: 0.35.4
+
+allowBuilds:
+  esbuild: true
+  workerd: true
+  unrs-resolver: true
+  sharp: true
