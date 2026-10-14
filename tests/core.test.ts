@@ -16,3 +16,9 @@ test('fixed-time steps land on the Japan-time day and roll over when the time ha
  assert.equal(new Date(stepDue(start,{delayHours:72,atTime:'20:00'})).toISOString(),'2026-10-17T11:00:00.000Z');
  assert.equal(new Date(stepDue(Date.parse('2026-10-14T23:30:00+09:00'),{delayHours:24,atTime:'07:00'})).toISOString(),'2026-10-14T22:00:00.000Z');
 });
+import {abWinner,abBucket} from '../lib/core.ts';
+test('A/B winner by open or click rate, tie keeps A; buckets are stable',()=>{
+ const s=[{variant:'A',sent:10,opened:3,clicked:2},{variant:'B',sent:10,opened:5,clicked:1}];
+ assert.equal(abWinner(s,'open'),'B');assert.equal(abWinner(s,'click'),'A');assert.equal(abWinner([{variant:'A',sent:4,opened:2,clicked:0},{variant:'B',sent:2,opened:1,clicked:0}],'open'),'A');
+ assert.equal(abBucket('x'),abBucket('x'));assert.ok(abBucket('y')>=0&&abBucket('y')<100);
+});
