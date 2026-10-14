@@ -6,6 +6,7 @@ import {parseJapanDate} from '@/lib/core';
 import {checkout,findCoupon,priceOf} from '@/lib/billing';
 import {recordConversion,attribution} from '@/lib/analytics';
 import {visitorFrom} from '@/lib/ab';
+import {partnerFor} from '@/lib/partners';
 import {formValues} from '@/lib/page-schema';
 const schema=z.object({owner:z.string().min(1).max(150),pageId:z.string().uuid(),method:z.enum(['bank','card']),consent:z.boolean(),terms:z.literal(true),key:z.string().uuid(),coupon:z.string().trim().max(40).default(''),bump:z.boolean().default(false),fields:z.record(z.unknown()).default({})});
 async function attach(owner:string,order:any,buyer:string,extra:Record<string,unknown>){if(order.buyer&&order.buyer!==buyer)throw Error('注文の所有者が異なります');if(order.buyer)return order;const {id,kind,version,created,updated,...data}=order;Object.assign(data,{buyer,...extra});const r=await db().prepare('UPDATE records SET data=?,updated=?,version=version+1 WHERE owner=? AND id=? AND version=?').bind(JSON.stringify(data),Date.now(),owner,id,version).run();if(!r.meta.changes)throw Error('注文が更新されました。もう一度お試しください');return get(owner,id);}
@@ -16,9 +17,10 @@ export async function POST(req:Request){try{const user=await customerOf(req);con
  // Pricing is decided here, never by the browser: coupon discount on the main product, split for installments.
  const coupon=b.coupon?await findCoupon(b.owner,b.coupon,product.id):null;const price=priceOf(product,coupon);const free=price.total===0&&product.billing==='one_time';
  const method=free?'free':b.method;const extra={amount:price.amount,listPrice:price.listPrice,discount:price.discount,...(coupon?{couponId:coupon.id,couponCode:coupon.code}:{}),...(price.installments?{installments:price.installments,paidCount:0}:{}),...(product.trialDays&&product.billing==='subscription'?{trialDays:product.trialDays}:{})};
+ const partner=await partnerFor(b.owner,req.headers.get('cookie'),email);if(partner&&!free)Object.assign(extra,{partnerId:partner.id});
  const fresh=!(await get(b.owner,b.key));let order=await makeOrder(b.owner,product.id,contact.id,method,b.key,extra);
  // Funnel attribution: which page variant and route led to this order (first request for this key only).
  let touch=null;if(fresh){try{touch=await recordConversion(b.owner,page,'order',visitorFrom(req.headers.get('cookie')),{orderId:order.id,contactId:contact.id});}catch{}}order=await attach(b.owner,order,buyer,{pageId:page.id,termsVersion:settings.version,...(Object.keys(values).length?{formValues:values}:{}),...(touch?{attribution:attribution(touch)}:{})});
- let bump=null;if(b.bump&&page.bumpProductId&&!free&&product.billing==='one_time'){const bp=all.find(p=>p.id===page.bumpProductId&&p.kind==='products'&&p.status==='active');if(bp){bump=await makeOrder(b.owner,bp.id,contact.id,b.method,b.key+'-bump',{amount:bp.price,listPrice:bp.price,discount:0,bumpOf:order.id});bump=await attach(b.owner,bump,buyer,{pageId:page.id,termsVersion:settings.version});}}
+ let bump=null;if(b.bump&&page.bumpProductId&&!free&&product.billing==='one_time'){const bp=all.find(p=>p.id===page.bumpProductId&&p.kind==='products'&&p.status==='active');if(bp){bump=await makeOrder(b.owner,bp.id,contact.id,b.method,b.key+'-bump',{amount:bp.price,listPrice:bp.price,discount:0,bumpOf:order.id,...(order.partnerId?{partnerId:order.partnerId}:{})});bump=await attach(b.owner,bump,buyer,{pageId:page.id,termsVersion:settings.version});}}
  if(method==='card'&&order.status==='pending_card')return response({url:await checkout(b.owner,order.id,new URL(req.url).origin)});
  return response({url:await nextPage(b.owner,page,'/purchases',order.id,!!bump)});}catch(e){return fail(e);}}
