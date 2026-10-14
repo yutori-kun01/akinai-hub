@@ -14,3 +14,14 @@ export function buildFunnels(pages:Item[],sequences:Item[]){
  const roots=live.filter(p=>!linked.has(p.id)&&(p.pageType==='optin'||!p.pageType||p.pageType==='sales')).map(p=>walk(p,new Set()));
  const used=new Set<string>();const mark=(n:Node)=>{if(n.page)used.add(n.page.id);n.children.forEach(c=>mark(c.node));};roots.forEach(mark);
  return {roots,loose:live.filter(p=>!used.has(p.id))};}
+// Funnel sharing (UTAGE's ファネル共有): the pages reachable from one entry page plus the step sequences its opt-in tags
+// start, as JSON. Links between pages are kept as indexes; products, A/B variants and record ids are not carried over.
+const linkKeys=['nextPageId','declinePageId','bumpThanksPageId'] as const;
+const strip=(r:Item):Item=>{const {id,kind,owner,version,created,updated,abParentId,...data}=r;return data;};
+export function exportFunnel(rootId:string,pages:Item[],sequences:Item[]){const byId=new Map(pages.map(p=>[p.id,p]));const order:string[]=[];const walk=(id:string)=>{if(!id||order.includes(id)||!byId.has(id))return;order.push(id);const p=byId.get(id)!;for(const k of linkKeys)walk(p[k]);};walk(rootId);if(!order.length)throw Error('ページが見つかりません');
+ const out=order.map(id=>{const p=strip(byId.get(id)!);for(const k of linkKeys)p[k]=p[k]?order.indexOf(p[k]):-1;return {...p,productId:'',bumpProductId:'',status:'draft',password:''} as Item;});
+ const tags=new Set(out.filter(p=>p.pageType==='optin'&&p.signupTag).map(p=>p.signupTag));
+ return {format:'akinai-funnel-v1',exported:new Date().toISOString(),pages:out,sequences:sequences.filter(s=>tags.has(s.tag)).map(s=>({...strip(s),status:'draft'}))};}
+export function planImport(data:any,slugs:Set<string>){if(data?.format!=='akinai-funnel-v1'||!Array.isArray(data.pages)||!data.pages.length||data.pages.length>30)throw Error('Akinai hubのファネルJSON（akinai-funnel-v1・30ページまで）を選んでください');const used=new Set(slugs);
+ const pages=data.pages.map((p:Item)=>{let slug=String(p.slug||'page').slice(0,60),n=1;while(used.has(slug))slug=String(p.slug||'page').slice(0,60)+'-'+(++n);used.add(slug);const links:Record<string,number>={};for(const k of linkKeys){links[k]=Number.isInteger(p[k])&&p[k]>=0&&p[k]<data.pages.length?p[k]:-1;}const page:Item={...p,slug,status:'draft',productId:'',bumpProductId:''};for(const k of linkKeys)page[k]='';return {page,links};});
+ return {pages,sequences:(Array.isArray(data.sequences)?data.sequences:[]).slice(0,20).map((s:Item)=>({...s,status:'draft'}))};}

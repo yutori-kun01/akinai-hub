@@ -51,3 +51,10 @@ test('video menu episodes open now, on a date, or N days after the first visit',
  assert.equal(episodeOpen(m[2],first,first+3*86400000-1),false);assert.equal(episodeOpen(m[2],first,first+3*86400000),true);
  assert.equal(newBlockSchema.parse({id:'s',type:'section',width:'third'}).width,'third');
 });
+import {exportFunnel,planImport} from '../lib/funnel-map.ts';
+test('funnel JSON keeps links by index and imports with fresh slugs',()=>{
+ const pages=[{id:'s',slug:'sales',pageType:'sales',nextPageId:'u',productId:'p1',status:'published'},{id:'u',slug:'up',pageType:'upsell',nextPageId:'t',declinePageId:'t'},{id:'t',slug:'thanks',pageType:'thanks'},{id:'x',slug:'other',pageType:'thanks'}];
+ const ex=exportFunnel('s',pages,[]);assert.deepEqual(ex.pages.map((p:any)=>[p.slug,p.nextPageId,p.declinePageId,p.productId]),[['sales',1,-1,''],['up',2,2,''],['thanks',-1,-1,'']]);
+ const plan=planImport(ex,new Set(['sales','up']));assert.deepEqual(plan.pages.map((p:any)=>p.page.slug),['sales-2','up-2','thanks']);assert.deepEqual(plan.pages[1].links,{nextPageId:2,declinePageId:2,bumpThanksPageId:-1});
+ assert.throws(()=>planImport({format:'other'},new Set()),/akinai-funnel-v1/);
+});
