@@ -1,4 +1,5 @@
 import {db,cfg,get,list,auditStatement,type Row,unpack} from './server';
+import {notifyAdmin} from './notify';
 import {nextPage} from './funnel';
 import {parseJapanDate} from './core';
 // Card payments through Stripe: one-time Checkout (card saved for a one-click upsell), subscriptions, fixed-count
@@ -43,7 +44,7 @@ export async function handleStripeEvent(event:Item):Promise<StripeResult>{const 
  if(event.type==='invoice.paid'){const sub=subscriptionOfInvoice(o);const found=sub?await orderBySubscription(sub):null;if(!found)return done();const x=found.order;if(!(o.amount_paid>0))return done();const paidCount=(x.paidCount||0)+1;const completed=x.billing==='installments'&&paidCount>=x.installments;
   if(completed&&x.billingStatus!=='completed')await stripe('subscriptions/'+sub,new URLSearchParams({cancel_at_period_end:'true'}),{idempotency:'complete:'+sub});
   await update(found.owner,x,{paidCount,billingStatus:completed?'completed':'active',...(x.status==='pending_card'?{status:'paid'}:{}),periodEnd:o.period_end?o.period_end*1000:x.periodEnd||null},'stripe:invoice-paid');return done();}
- if(event.type==='invoice.payment_failed'){const sub=subscriptionOfInvoice(o);const found=sub?await orderBySubscription(sub):null;if(found&&found.order.billingStatus!=='completed')await update(found.owner,found.order,{billingStatus:'past_due'},'stripe:payment-failed');return done();}
+ if(event.type==='invoice.payment_failed'){const sub=subscriptionOfInvoice(o);const found=sub?await orderBySubscription(sub):null;if(found&&found.order.billingStatus!=='completed'){const x=found.order;await update(found.owner,x,{billingStatus:'past_due'},'stripe:payment-failed');await notifyAdmin(found.owner,'payment-failed:'+(o.id||sub),'継続課金の支払いに失敗しました｜'+x.productName,`${x.productName}（注文番号 ${x.id}）の${x.billing==='installments'?'分割払い':'継続課金'}で、カードの請求に失敗しました。\nStripeが設定に従って再請求します。購入者にカード情報の更新を案内してください。\n請求の状態はStripeのダッシュボードで確認できます。`);}return done();}
  if(event.type==='customer.subscription.deleted'){const found=await orderBySubscription(o.id);if(found&&found.order.billingStatus!=='completed'&&found.order.status==='paid')await update(found.owner,found.order,{status:'revoked',billingStatus:'canceled'},'stripe:subscription-ended');return done();}
  return ok;}
 // ---------- One-click upsell ----------

@@ -1,0 +1,9 @@
+import {db,cfg,list} from './server';
+import {sendMail,selectedProvider} from './mail-providers';
+// Operator notices (UTAGE's 継続課金の失敗通知 and similar). Each key is stored once, so Stripe retries of the same event do
+// not repeat it. When mail sending is on, the administrator also gets an e-mail; a failed send is recorded, never retried.
+export async function notifyAdmin(owner:string,key:string,subject:string,text:string){const now=Date.now(),id='notice:'+owner+':'+key;const r=await db().prepare('INSERT OR IGNORE INTO system_state(id,data,updated) VALUES(?,?,?)').bind(id,JSON.stringify({subject,text,at:now,read:false,mail:'off'}),now).run();if(!r.meta.changes)return false;
+ if(cfg().MAIL_ENABLED==='true'&&cfg().MAIL_FROM){let mail='failed';try{const admin=await db().prepare('SELECT email FROM auth_admin ORDER BY id LIMIT 1').first<{email:string}>();if(admin){const s=(await list(owner,'settings'))[0];await sendMail(selectedProvider(s?.mailProvider),cfg(),{id:'notice:'+key,to:admin.email,subject:'[Akinai hub] '+subject,text,category:'transactional',fromName:s?.fromName});mail='sent';}else mail='off';}catch{}await db().prepare('UPDATE system_state SET data=? WHERE id=?').bind(JSON.stringify({subject,text,at:now,read:false,mail}),id).run();}
+ return true;}
+export async function notices(owner:string){const rows=(await db().prepare('SELECT id,data FROM system_state WHERE id LIKE ? ORDER BY updated DESC LIMIT 30').bind('notice:'+owner+':%').all<{id:string;data:string}>()).results;return rows.map(r=>({id:r.id.slice(('notice:'+owner+':').length),...JSON.parse(r.data)}));}
+export async function readNotices(owner:string){const rows=await notices(owner);for(const n of rows.filter(n=>!n.read))await db().prepare('UPDATE system_state SET data=? WHERE id=?').bind(JSON.stringify({...n,id:undefined,read:true}),'notice:'+owner+':'+n.id).run();return rows.filter(n=>!n.read).length;}

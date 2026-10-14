@@ -7,3 +7,12 @@ test('Payment transitions reject unpaid delivery and duplicate confirmation',()=
 test('Invalid prices, contact consent types, and unsafe slugs are rejected',()=>{assert.equal(schemas.products.safeParse({name:'x',description:'',price:-1,status:'active'}).success,false);assert.equal(schemas.contacts.safeParse({name:'x',email:'not-email',tags:[],consent:true,status:'subscribed'}).success,false);assert.equal(schemas.pages.safeParse({name:'x',slug:'../admin',headline:'x',body:'',productId:'',status:'published'}).success,false);});
 test('Schedule without offset is interpreted as JST',()=>{assert.equal(parseJapanDate('2026-10-13T22:30'),Date.parse('2026-10-13T13:30:00Z'));});
 test('Webhook accepts valid HMAC and rejects tamper, expiry, absent signatures',async()=>{const now=Date.now();const t=Math.floor(now/1000);const raw=JSON.stringify({id:'evt_test'});const secret='test_only';const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);const sig=Buffer.from(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(t+'.'+raw))).toString('hex');assert.equal(await verifyStripe(raw,`t=${t},v1=${sig}`,secret,now),true);assert.equal(await verifyStripe(raw+' ',`t=${t},v1=${sig}`,secret,now),false);assert.equal(await verifyStripe(raw,`t=${t},v1=${sig}`,secret,now+301000),false);assert.equal(await verifyStripe(raw,'',secret,now),false);});
+import {stepDue} from '../lib/core.ts';
+test('fixed-time steps land on the Japan-time day and roll over when the time has passed',()=>{
+ const start=Date.parse('2026-10-14T10:30:00+09:00');
+ assert.equal(stepDue(start,{delayHours:5}),start+5*3600000);
+ assert.equal(new Date(stepDue(start,{delayHours:0,atTime:'20:00'})).toISOString(),'2026-10-14T11:00:00.000Z');
+ assert.equal(new Date(stepDue(start,{delayHours:0,atTime:'09:00'})).toISOString(),'2026-10-15T00:00:00.000Z');
+ assert.equal(new Date(stepDue(start,{delayHours:72,atTime:'20:00'})).toISOString(),'2026-10-17T11:00:00.000Z');
+ assert.equal(new Date(stepDue(Date.parse('2026-10-14T23:30:00+09:00'),{delayHours:24,atTime:'07:00'})).toISOString(),'2026-10-14T22:00:00.000Z');
+});
