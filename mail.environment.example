@@ -47,3 +47,8 @@ RELEASE_PUBLIC_KEY=
 # Receiving updates (buyer's install): the key shown in the seller's purchase library, and the seller's URL
 LICENSE_KEY=
 LICENSE_SERVER=
+
+# Zoom（任意・イベント日程の会議URL自動作成）。ZoomのServer-to-Server OAuthアプリ（meeting:write権限）
+ZOOM_ACCOUNT_ID=
+ZOOM_CLIENT_ID=
+ZOOM_CLIENT_SECRET=

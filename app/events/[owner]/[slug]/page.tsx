@@ -1,7 +1,7 @@
 import {list} from '@/lib/server';
 import {getChatGPTUser} from '@/app/chatgpt-auth';
 import {standalone,workspace} from '@/lib/auth';
-import {seatsTaken,sessionTimes,calendarUrl} from '@/lib/events';
+import {seatsTaken,sessionTimes,calendarUrl,joinOf} from '@/lib/events';
 import EventBooking from '@/app/event-booking';
 export const dynamic='force-dynamic';
 // Public booking page. The join URL is shown only to people who hold a booking.
@@ -11,6 +11,8 @@ export default async function EventPage({params}:{params:Promise<{owner:string;s
  const mine=email?(await list(owner,'bookings')).filter(b=>b.eventId===event.id&&b.status==='booked'&&(b.buyer===user!.userId||b.email===email)):[];
  const sessions=[...event.sessions].sort((a:any,b:any)=>a.startsAt.localeCompare(b.startsAt)).map((s:any)=>({id:s.id,startsAt:s.startsAt,minutes:s.minutes,capacity:s.capacity,note:s.note||'',left:Math.max(0,s.capacity-(taken[s.id]||0)),closed:!(sessionTimes(s).start>now)})).filter((s:any)=>!s.closed||mine.some((m:any)=>m.sessionId===s.id));
  const settings=(await list(owner,'settings'))[0];
- return <main className="store landing ev-page"><header><a className="store-brand" href="/">{settings?.name||'Akinai hub'}</a><a href="/purchases">購入したコンテンツ</a></header><p className="eyebrow">EVENT</p><h1>{event.headline}</h1>{event.location&&<p className="ev-location">場所：{event.location}</p>}<p className="preline">{event.body}</p>
-  <EventBooking owner={owner} eventId={event.id} sessions={sessions} loggedEmail={email} mine={mine.map((m:any)=>({id:m.id,sessionId:m.sessionId,calendar:calendarUrl(event,event.sessions.find((s:any)=>s.id===m.sessionId))}))} joinUrl={mine.length?event.joinUrl:''}/>
+ // Paid / buyers-only events point to the product's published sales page.
+ const product=event.requireProductId?(await list(owner,'products')).find(p=>p.id===event.requireProductId):null;const salesPage=product?(await list(owner,'pages')).find(p=>p.status==='published'&&(p.pageType||'sales')==='sales'&&p.productId===product.id&&!p.abParentId):null;
+ return <main className="store landing ev-page"><header><a className="store-brand" href="/">{settings?.name||'Akinai hub'}</a><a href="/purchases">購入したコンテンツ</a></header><p className="eyebrow">EVENT</p><h1>{event.headline}</h1>{event.location&&<p className="ev-location">場所：{event.location}</p>}<p className="preline">{event.body}</p>{product&&<div className="note-box ev-paid"><div><strong>「{product.name}」をお持ちの方が予約できます</strong><p>{salesPage?<a className="text-btn" href={`/shop/${encodeURIComponent(owner)}/${salesPage.slug}`}>お申し込みはこちら（¥{Number(product.price).toLocaleString('ja-JP')}）</a>:'お申し込み方法は販売者にお問い合わせください。'} 入金の確認後、このページから予約できます。</p></div></div>}
+  <EventBooking owner={owner} eventId={event.id} sessions={sessions} loggedEmail={email} mine={mine.map((m:any)=>{const session=event.sessions.find((s:any)=>s.id===m.sessionId);return {id:m.id,sessionId:m.sessionId,calendar:calendarUrl(event,session),join:joinOf(event,session)};})}/>
   {settings?.privacyText&&<details><summary>プライバシーポリシー</summary><p className="preline">{settings.privacyText}</p></details>}</main>;}

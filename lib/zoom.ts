@@ -1,0 +1,7 @@
+import {cfg} from './server';
+// Zoom meetings for event sessions through a Server-to-Server OAuth app (ZOOM_ACCOUNT_ID / ZOOM_CLIENT_ID / ZOOM_CLIENT_SECRET).
+// Only the join URL is kept; the host starts the meeting from their own Zoom account.
+export const zoomConfigured=()=>!!(cfg().ZOOM_ACCOUNT_ID&&cfg().ZOOM_CLIENT_ID&&cfg().ZOOM_CLIENT_SECRET);
+export async function createZoomMeeting(topic:string,startsAt:string,minutes:number){if(!zoomConfigured())throw Error('Zoom連携が未設定です（ZOOM_ACCOUNT_ID・ZOOM_CLIENT_ID・ZOOM_CLIENT_SECRET）');
+ const t=await fetch('https://zoom.us/oauth/token?'+new URLSearchParams({grant_type:'account_credentials',account_id:cfg().ZOOM_ACCOUNT_ID}),{method:'POST',headers:{Authorization:'Basic '+btoa(cfg().ZOOM_CLIENT_ID+':'+cfg().ZOOM_CLIENT_SECRET)}});const token=await t.json() as {access_token?:string};if(!t.ok||!token.access_token)throw Error('Zoomの認証に失敗しました');
+ const r=await fetch('https://api.zoom.us/v2/users/me/meetings',{method:'POST',headers:{Authorization:'Bearer '+token.access_token,'Content-Type':'application/json'},body:JSON.stringify({topic:topic.slice(0,200),type:2,start_time:startsAt+':00',timezone:'Asia/Tokyo',duration:minutes,settings:{join_before_host:false,waiting_room:true}})});const m=await r.json() as {join_url?:string;id?:number};if(!r.ok||!m.join_url||!/^https:\/\//.test(m.join_url))throw Error('Zoom会議を作成できませんでした');return {joinUrl:m.join_url,meetingId:String(m.id||'')};}
