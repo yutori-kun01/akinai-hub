@@ -1,0 +1,1 @@
+ALTER TABLE `conversions` ADD `target` text DEFAULT '' NOT NULL;

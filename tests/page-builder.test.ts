@@ -21,3 +21,8 @@ test('funnel map follows next/yes/no links and opt-in tags, without loops',()=>{
  assert.deepEqual(roots[1].children.map(c=>c.kind),['next','bump']);
  assert.deepEqual(loose.map(p=>p.id),['x']);
 });
+import {parseChapters} from '../lib/page-schema.ts';
+test('video chapters parse m:ss and h:mm:ss lines and ignore the rest',()=>{
+ assert.deepEqual(parseChapters('0:00 はじめに\n3:15 本題\nメモ\n1:02:03 まとめ'),[{at:0,title:'はじめに'},{at:195,title:'本題'},{at:3723,title:'まとめ'}]);
+ assert.equal(newBlockSchema.parse({id:'x',type:'button'}).action,'link');assert.equal(newBlockSchema.parse({id:'x',type:'text'}).reveal,'always');
+});
