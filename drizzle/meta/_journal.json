@@ -57,6 +57,13 @@
       "when": 1791942929617,
       "tag": "0007_mail_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1791943906394,
+      "tag": "0008_funnel_analytics",
+      "breakpoints": true
     }
   ]
 }

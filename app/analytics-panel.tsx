@@ -1,0 +1,17 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {Copy} from 'lucide-react';
+type Item=Record<string,any>;
+const yen=(n:number)=>'¥'+n.toLocaleString('ja-JP');
+const rate=(a:number,b:number)=>b?(Math.round(a/b*1000)/10)+'%':'—';
+function Rows({rows,label}:{rows:Item[];label:string}){return <table><thead><tr><th>{label}</th><th>訪問</th><th>ユニーク</th><th>登録</th><th>申込</th><th>入金</th><th>売上</th><th>登録率</th><th>購入率</th></tr></thead><tbody>{rows.map(r=><tr key={r.key||r.parentId}><td>{r.name||r.key}{r.slug&&<small>/{r.slug}</small>}</td><td>{r.views}</td><td>{r.visitors}</td><td>{r.optins}</td><td>{r.orders}</td><td>{r.paid}</td><td>{yen(r.revenue)}</td><td>{rate(r.optins,r.visitors)}</td><td>{rate(r.paid,r.visitors)}</td></tr>)}</tbody></table>}
+// Page KPIs (UTAGE's データ合算 equivalent), A/B variants side by side, and per-route breakdown with a route URL builder.
+export default function AnalyticsPanel({pages,storeBase}:{pages:Item[];storeBase:string}){const [days,D]=useState(30),[data,S]=useState<Item|null>(null),[error,E]=useState(''),[open,O]=useState(''),[route,R]=useState({pageId:'',ref:''});
+ useEffect(()=>{S(null);fetch('/api/analytics?days='+days).then(async r=>{const d=await r.json() as Item;if(!r.ok)throw Error(d.error);S(d);}).catch(e=>E(String(e)));},[days]);
+ const page=pages.find(p=>p.id===route.pageId);const routeUrl=page&&route.ref?`${typeof location==='undefined'?'':location.origin}${storeBase}${page.slug}?ref=${encodeURIComponent(route.ref)}`:'';
+ return <><section className="card"><div className="section-title"><h2>ページ別の成果</h2><label className="inline">期間<select value={days} onChange={e=>D(Number(e.target.value))}><option value={7}>7日</option><option value={30}>30日</option><option value={90}>90日</option><option value={0}>全期間</option></select></label></div>
+  <p className="subtle">訪問はページ表示の計測、ユニークはブラウザ単位（同じ人でも端末が違えば別）。購入率は入金済みの注文で計算します。A/Bテストのパターンは元のページにまとめて表示します。</p>
+  {error&&<p role="alert">{error}</p>}{!data?<p>読み込んでいます…</p>:!data.families.length?<p className="subtle">まだ計測データがありません。公開ページを開くと記録されます。</p>:<div className="table-wrap"><Rows rows={data.families} label="ページ"/></div>}
+  {data?.families.map((f:Item)=><details key={f.parentId} open={open===f.parentId} onToggle={e=>(e.target as HTMLDetailsElement).open&&O(f.parentId)}><summary>{f.name} の内訳（{f.variants.length>1?`A/B ${f.variants.length}パターン・`:''}経路 {f.routes.length}）</summary>{f.variants.length>1&&<div className="table-wrap"><Rows rows={f.variants} label="パターン"/></div>}<div className="table-wrap"><Rows rows={f.routes} label="経路（ref / utm_source）"/></div></details>)}
+ </section>
+ <section className="card"><div className="section-title"><h2>登録経路URLを作る</h2></div><p className="subtle">同じページを流入元ごとのURLで配ると、経路別に訪問・登録・売上を比べられます（広告はutm_sourceでも集計します）。</p><div className="field-row"><label>ページ<select aria-label="経路URLを作るページ" value={route.pageId} onChange={e=>R({...route,pageId:e.target.value})}><option value="">選択してください</option>{pages.filter(p=>p.status==='published'&&!p.abParentId).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>経路名（英数字・日本語可）<input maxLength={100} value={route.ref} onChange={e=>R({...route,ref:e.target.value.replace(/[^\p{L}\p{N}_.\-]/gu,'')})} placeholder="instagram-profile"/></label></div>{routeUrl&&<label>経路URL<span className="secret-row"><input readOnly value={routeUrl} onFocus={e=>e.target.select()}/><button type="button" className="icon" aria-label="経路URLをコピー" onClick={()=>navigator.clipboard?.writeText(routeUrl)}><Copy size={15}/></button></span></label>}</section></>;}
