@@ -8,3 +8,12 @@ test('page blocks reject executable URLs and support internal CTA',()=>{for(cons
 test('old records retain backwards-compatible page and email defaults',()=>{const p=schemas.pages.parse({name:'LP',slug:'page-one',headline:'Hello',body:'',productId:'',status:'draft'});assert.equal(p.pageType,'sales');assert.deepEqual(p.blocks,[]);const c=schemas.campaigns.parse({name:'mail',subject:'hi',body:'x',tag:'',scheduledAt:'',status:'draft'});assert.equal(c.channel,'email');});
 test('LINE webhook signature verifies exact body before parsing',async()=>{const raw='{"events":[]}';const sig=createHmac('sha256','secret').update(raw).digest('base64');assert.equal(await verifyLine(raw,sig,'secret'),true);assert.equal(await verifyLine(raw+' ',sig,'secret'),false);assert.equal(await verifyLine(raw,sig,'other'),false);assert.equal(await verifyLine(raw,'','secret'),false);});
 test('LINE sends retry key, accepts matching 409 and rejects 4xx',async()=>{const to='U'+'a'.repeat(32),key=crypto.randomUUID();const fake=(async(url:any,init:any)=>{assert.equal(url,'https://api.line.me/v2/bot/message/push');assert.equal(init.headers['X-Line-Retry-Key'],key);assert.equal(JSON.parse(init.body).to,to);return new Response('',{status:409,headers:{'x-line-accepted-request-id':'accepted'}});}) as typeof fetch;assert.equal(await pushLine('token',to,'hello',key,fake),'accepted');await assert.rejects(pushLine('token',to,'hello',key,(async()=>new Response('',{status:401})) as typeof fetch));await assert.rejects(pushLine('token',to,'x'.repeat(5001),key,fake));});
+import {matchRules} from '../lib/rules.ts';
+test('delivery rules combine with all/any and treat unknown engagement as not matched',async()=>{
+ const ctx={tags:['lead','vip'],paid:new Set(['p1']),fields:{pref:'東京都'},engagement:async(id:string)=>id==='m1'?{opened:true,clicked:false}:null};
+ assert.equal(await matchRules([],'all',ctx),true);
+ assert.equal(await matchRules([{type:'tag',value:'vip',key:''},{type:'notBought',value:'p1',key:''}],'all',ctx),false);
+ assert.equal(await matchRules([{type:'tag',value:'vip',key:''},{type:'notBought',value:'p1',key:''}],'any',ctx),true);
+ assert.equal(await matchRules([{type:'opened',value:'m1',key:''},{type:'notClicked',value:'m1',key:''},{type:'field',key:'pref',value:'東京都'}],'all',ctx),true);
+ assert.equal(await matchRules([{type:'opened',value:'m2',key:''}],'any',ctx),false);
+});

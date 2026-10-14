@@ -1,11 +1,12 @@
 import { z } from "zod";
+import {ruleSchema} from './rules.ts';
 import {pageExtras,blockSchema} from "./page-schema.ts";
 import {lineMessageList,lineAction,richMenuLayouts} from "./line-messages.ts";
 export const kinds=["products","contacts","pages","campaigns","sequences","courses","settings","lineContacts","apps","licenses","releases","coupons","richMenus","lineAutoReplies"] as const;
 export type Kind=typeof kinds[number];
 const text=z.string().trim().max(20000);const short=z.string().trim().min(1).max(200);
 const redirectUri=z.string().max(1000).refine(v=>/^https:\/\/[^\s#]+$/.test(v)||/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/[^\s#]*$/.test(v),"リダイレクトURIはHTTPS（開発時のみlocalhost）を指定してください");
-const deliveryRules={channel:z.enum(["email","line"]).default("email"),excludeTag:z.string().max(40).default(""),stopProductId:z.string().max(100).default(""),requireProductId:z.string().max(100).default(""),engagement:z.enum(["","opened","clicked","not_opened","not_clicked"]).default(""),engagementSourceId:z.string().max(100).default(""),tracking:z.boolean().default(true),clickTag:z.string().max(40).default("")};
+const deliveryRules={channel:z.enum(["email","line"]).default("email"),excludeTag:z.string().max(40).default(""),stopProductId:z.string().max(100).default(""),requireProductId:z.string().max(100).default(""),engagement:z.enum(["","opened","clicked","not_opened","not_clicked"]).default(""),engagementSourceId:z.string().max(100).default(""),tracking:z.boolean().default(true),clickTag:z.string().max(40).default(""),rules:z.array(ruleSchema).max(20).default([]),match:z.enum(["all","any"]).default("all")};
 // HTML mail: "blocks" renders the mail block editor, "html" sends admin-written HTML as is; the text body stays as the plain-text part.
 const mailContent={htmlMode:z.enum(["text","blocks","html"]).default("text"),mailBlocks:z.array(blockSchema).max(60).default([]),rawHtml:z.string().max(200000).default(""),lineMessages:lineMessageList};
 export const schemas={
@@ -19,7 +20,7 @@ export const schemas={
  releases:z.object({name:short,productId:z.string().min(1).max(100),version:z.string().regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?$/,"バージョンは1.2.3形式で入力してください"),notes:text,fileKey:z.string().max(300).default(""),sha256:z.string().regex(/^[a-f0-9]{64}$/,"SHA-256を確認してください"),size:z.number().int().min(1).max(100000000),signature:z.string().regex(/^[A-Za-z0-9_-]{60,120}$/,"署名を確認してください"),status:z.enum(["draft","published"]).default("draft"),publishedAt:z.number().default(0)}),
  contacts:z.object({consentEvidence:z.string().max(3000).default(''),name:short,email:z.string().trim().email().max(254).transform(s=>s.toLowerCase()),tags:z.array(z.string().trim().min(1).max(40)).max(30),consent:z.boolean(),status:z.enum(["subscribed","unsubscribed"]),source:z.string().max(200).default("manual"),attribution:z.record(z.string().max(200)).default({}),fields:z.record(z.string().max(2000)).default({})}),
  pages:z.object({...pageExtras,name:short,slug:z.string().regex(/^[a-z][a-z0-9-]{2,70}$/),headline:short,body:text,productId:z.string().max(100),status:z.enum(["draft","published"]),deadline:z.string().max(40).default("")}),
- campaigns:z.object({...deliveryRules,...mailContent,name:short,subject:short,body:text,tag:z.string().max(40),scheduledAt:z.string().max(40),status:z.enum(["draft","ready"])}),
+ campaigns:z.object({...deliveryRules,...mailContent,name:short,subject:short,body:text,tag:z.string().max(40),scheduledAt:z.string().max(40),status:z.enum(["draft","ready"]),abEnabled:z.boolean().default(false),abSubject:z.string().max(200).default(""),abBody:z.string().max(100000).default("")}).refine(c=>!c.abEnabled||c.channel!=="line"&&c.abSubject.trim().length>0,{message:"A/BテストはメールでBパターンの件名が必要です",path:["abSubject"]}),
  sequences:z.object({...deliveryRules,status:z.enum(["draft","active","paused"]).default("draft"),name:short,tag:z.string().min(1).max(40),steps:z.array(z.object({delayHours:z.number().int().min(0).max(8760),atTime:z.string().regex(/^(|([01]\d|2[0-3]):[0-5]\d)$/,'送信時刻はHH:MMで入力してください').default(''),subject:short,body:text,...mailContent})).min(1).max(20)}),
  courses:z.object({name:short,productId:z.string().min(1).max(100),lessons:z.array(z.object({title:short,body:text,videoUrl:z.string().max(1000).default("")})).max(100)}),
  settings:z.object({lineAddUrl:z.string().max(1000).refine(v=>!v||/^https:\/\/(lin\.ee|line\.me)\//.test(v),"LINEの友だち追加URLを入力してください").default(""),lineFollowTag:z.string().max(40).default("line"),mailProvider:z.enum(["resend","brevo","sendgrid","mailgun","postmark"]).default("resend"),name:short,fromName:z.string().max(100),footer:text,bankInstructions:text,legalText:text,privacyText:text})
@@ -34,3 +35,5 @@ export function parseJapanDate(value:string){if(!value)return NaN;return Date.pa
 // Step due time. Without atTime: start + delayHours. With atTime (UTAGE's 「N日後の20:00」): the Japan-time calendar day of the
 // start plus floor(delayHours/24) days, at that clock time; a time already past on that day moves to the next day.
 export function stepDue(start:number,step:{delayHours:number;atTime?:string}){if(!step.atTime)return start+step.delayHours*3600000;const [h,m]=step.atTime.split(':').map(Number);const day=Math.floor((start+9*3600000)/86400000)+Math.floor(step.delayHours/24);const due=day*86400000+(h*60+m)*60000-9*3600000;return due<start?due+86400000:due;}
+// Mail A/B split: a stable half of the readers (by contact id) gets pattern B.
+export function abVariant(contactId:string){let h=2166136261;for(const ch of contactId){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return (h>>>0)%2===0?'A':'B';}
