@@ -1,0 +1,3 @@
+import {readClick,recordMailEvent} from '@/lib/tracking';
+// Redirects only to the URL signed into the mail. Recording failures never block the reader.
+export async function GET(req:Request){const hit=await readClick(new URL(req.url).searchParams).catch(()=>null);if(!hit)return new Response('このリンクは無効です。メール内の元のリンクをご確認ください。',{status:400,headers:{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'}});try{await recordMailEvent(hit.id,'click',hit.url);}catch{}return new Response(null,{status:302,headers:{Location:hit.url,'Cache-Control':'no-store','Referrer-Policy':'no-referrer'}});}

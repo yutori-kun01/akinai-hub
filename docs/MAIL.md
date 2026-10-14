@@ -38,3 +38,14 @@ Provider通知とジョブの受付番号を照合して履歴に反映します
 - https://www.twilio.com/docs/sendgrid/for-developers/tracking-events/getting-started-event-webhook-security-features
 - https://documentation.mailgun.com/docs/mailgun/user-manual/webhooks/securing-webhooks
 - https://postmarkapp.com/developer/webhooks/webhooks-overview
+
+## HTMLメール・開封/クリック計測（2026-10-14追加）
+
+- メール形式：テキスト／HTML（ブロックで作成：見出し・本文・画像・ボタン・区切り線・余白）／HTML（直接入力）。HTMLにはテキスト版を必ず同送します（空欄ならHTMLから自動作成）。
+- 差し込み：`{{name}}` `{{email}}`、UTAGE形式の `%name%` `%mail%` も使えます。HTMLへの差し込み値はエスケープします。
+- 予約時点のHTMLを配信キューに保存します。予約後の本文・HTML・形式の変更はできません（別の配信として作成）。
+- 計測（既定でオン、配信ごとにオフ可）：本文中の https リンクを署名付きの計測URL（`/api/mail/c`）に置き換え、HTMLには計測画像（`/api/mail/o`）を入れます。配信停止リンクは置き換えません。署名が合わないURLは転送しません（オープンリダイレクト対策）。
+- 開封は受信側で画像が表示された時だけ記録されます。Apple Mail のプライバシー保護やセキュリティ製品の事前取得・自動クリックで実際より多く数えられることがあります。
+- クリックした人へのタグ付け：配信ごとに「クリックした人に付けるタグ」を指定でき、そのタグでステップ配信を開始できます。
+- 配信条件：「指定した配信を 開封した／していない／クリックした／していない 人だけ」。予約時と送信直前の両方で判定します。メールのみ（LINEは対象外）。
+- 一覧に配信ごとの送信数・開封率・クリック率を表示します。履歴はバックアップに含まれます。

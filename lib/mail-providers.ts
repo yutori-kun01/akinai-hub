@@ -25,18 +25,18 @@ export function providerStatus(id:MailProvider,c:Config) {
  return {id,label:labels[id],configured:!missing.length&&!issues.length,missing,issues};
 }
 export function providerStatuses(c:Config){return providerIds.map(id=>providerStatus(id,c));}
-export type MailMessage={id:string;to:string;subject:string;text:string;category:string;fromName?:string};
+export type MailMessage={id:string;to:string;subject:string;text:string;html?:string|null;category:string;fromName?:string};
 export async function sendMail(id:MailProvider,c:Config,m:MailMessage,request:typeof fetch=fetch):Promise<{providerId:string|null}> {
  const status=providerStatus(id,c); if(!status.configured)throw Error('メール設定が不足しています: '+[...status.missing,...status.issues].join(', '));
  const from=sender(c.MAIL_FROM,m.fromName);
  const formatted=from.name?'"'+from.name.replace(/["\\]/g,'\\$&')+'" <'+from.email+'>':from.email;
  let url='';let body:BodyInit;const headers:Record<string,string>={'Content-Type':'application/json'};
  switch(id){
- case 'resend':url='https://api.resend.com/emails';headers.Authorization='Bearer '+c.RESEND_API_KEY;headers['Idempotency-Key']=m.id;body=JSON.stringify({from:formatted,to:[m.to],subject:m.subject,text:m.text});break;
- case 'brevo':url='https://api.brevo.com/v3/smtp/email';headers['api-key']=c.BREVO_API_KEY;body=JSON.stringify({sender:from,to:[{email:m.to}],subject:m.subject,textContent:m.text});break;
- case 'sendgrid':url='https://api.sendgrid.com/v3/mail/send';headers.Authorization='Bearer '+c.SENDGRID_API_KEY;body=JSON.stringify({from,personalizations:[{to:[{email:m.to}]}],subject:m.subject,content:[{type:'text/plain',value:m.text}]});break;
- case 'mailgun':url='https://'+(c.MAILGUN_REGION==='eu'?'api.eu.mailgun.net':'api.mailgun.net')+'/v3/'+c.MAILGUN_DOMAIN+'/messages';headers.Authorization='Basic '+btoa('api:'+c.MAILGUN_API_KEY);delete headers['Content-Type'];{const form=new FormData();for(const [k,v] of Object.entries({from:formatted,to:m.to,subject:m.subject,text:m.text}))form.set(k,v);body=form;}break;
- case 'postmark':url='https://api.postmarkapp.com/email';headers['X-Postmark-Server-Token']=c.POSTMARK_SERVER_TOKEN;headers.Accept='application/json';body=JSON.stringify({From:formatted,To:m.to,Subject:m.subject,TextBody:m.text,MessageStream:m.category==='transactional'?(c.POSTMARK_TRANSACTIONAL_STREAM_ID||'outbound'):c.POSTMARK_BROADCAST_STREAM_ID});break;
+ case 'resend':url='https://api.resend.com/emails';headers.Authorization='Bearer '+c.RESEND_API_KEY;headers['Idempotency-Key']=m.id;body=JSON.stringify({from:formatted,to:[m.to],subject:m.subject,text:m.text,...(m.html?{html:m.html}:{})});break;
+ case 'brevo':url='https://api.brevo.com/v3/smtp/email';headers['api-key']=c.BREVO_API_KEY;body=JSON.stringify({sender:from,to:[{email:m.to}],subject:m.subject,textContent:m.text,...(m.html?{htmlContent:m.html}:{})});break;
+ case 'sendgrid':url='https://api.sendgrid.com/v3/mail/send';headers.Authorization='Bearer '+c.SENDGRID_API_KEY;body=JSON.stringify({from,personalizations:[{to:[{email:m.to}]}],subject:m.subject,content:[{type:'text/plain',value:m.text},...(m.html?[{type:'text/html',value:m.html}]:[])]});break;
+ case 'mailgun':url='https://'+(c.MAILGUN_REGION==='eu'?'api.eu.mailgun.net':'api.mailgun.net')+'/v3/'+c.MAILGUN_DOMAIN+'/messages';headers.Authorization='Basic '+btoa('api:'+c.MAILGUN_API_KEY);delete headers['Content-Type'];{const form=new FormData();for(const [k,v] of Object.entries({from:formatted,to:m.to,subject:m.subject,text:m.text,...(m.html?{html:m.html}:{})}))form.set(k,v);body=form;}break;
+ case 'postmark':url='https://api.postmarkapp.com/email';headers['X-Postmark-Server-Token']=c.POSTMARK_SERVER_TOKEN;headers.Accept='application/json';body=JSON.stringify({From:formatted,To:m.to,Subject:m.subject,TextBody:m.text,...(m.html?{HtmlBody:m.html}:{}),MessageStream:m.category==='transactional'?(c.POSTMARK_TRANSACTIONAL_STREAM_ID||'outbound'):c.POSTMARK_BROADCAST_STREAM_ID});break;
  }
  // A timeout can occur after acceptance. Never retry or switch providers here.
  const response=await request(url,{method:'POST',headers,body,signal:AbortSignal.timeout(15000),redirect:'manual'});
