@@ -12,7 +12,7 @@ export const blockSchema=z.object({id:z.string().min(1).max(100),type:z.enum(blo
  // Shown only while an auto-webinar on the page is live and has played this many minutes (0 = always).
  showAt:z.number().int().min(0).max(600).default(0),
  // Button image (replaces the text button) and a short icon/emoji before the label.
- src:safeLink.default(''),icon:z.string().max(4).default(''),
+ src:safeLink.default(''),icon:z.string().max(4).default(''),sizeMobile:z.enum(['','s','m','l']).default(''),
  // Comments: approve before showing (true) or show at once.
  moderate:z.boolean().default(true)});
 // Extra form questions (UTAGE's 読者項目/フリー項目, 住所・電話). Answers are stored on the contact (and the order for purchases).
