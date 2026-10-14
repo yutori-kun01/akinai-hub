@@ -26,3 +26,10 @@ test('video chapters parse m:ss and h:mm:ss lines and ignore the rest',()=>{
  assert.deepEqual(parseChapters('0:00 はじめに\n3:15 本題\nメモ\n1:02:03 まとめ'),[{at:0,title:'はじめに'},{at:195,title:'本題'},{at:3723,title:'まとめ'}]);
  assert.equal(newBlockSchema.parse({id:'x',type:'button'}).action,'link');assert.equal(newBlockSchema.parse({id:'x',type:'text'}).reveal,'always');
 });
+import {formValues} from '../lib/page-schema.ts';
+test('extra form fields are validated and normalised on the server',()=>{
+ const fields=[{key:'tel',label:'電話番号',type:'tel',required:true,options:''},{key:'postal',label:'郵便番号',type:'postal',required:false,options:''},{key:'plan',label:'プラン',type:'select',required:false,options:'A\nB'},{key:'ok',label:'同意',type:'checkbox',required:false,options:''}] as any;
+ assert.throws(()=>formValues(fields,{}),/電話番号を入力/);assert.throws(()=>formValues(fields,{tel:'abc'}),/電話番号の形式/);assert.throws(()=>formValues(fields,{tel:'03-1234-5678',plan:'C'}),/選択肢/);
+ assert.deepEqual(formValues(fields,{tel:' 03-1234-5678 ',postal:'１２３－４５６７',plan:'B',ok:true,extra:'x'}),{tel:'03-1234-5678',postal:'123-4567',plan:'B',ok:'はい'});
+ assert.throws(()=>newBlockSchema.parse({id:'x',type:'text'})&&zz.object(extras).parse({formFields:[{key:'a',label:'A'},{key:'a',label:'B'}]}),/重複/);
+});
