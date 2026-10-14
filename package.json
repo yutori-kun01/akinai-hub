@@ -13,7 +13,7 @@
     "deploy:standalone": "wrangler deploy --config dist/server/wrangler.json",
     "db:migrate:standalone": "wrangler d1 migrations apply DB --remote --config wrangler.standalone.json",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/core.test.ts tests/mail-providers.test.ts tests/mail-events.test.ts tests/funnel-line.test.ts tests/page-builder.test.ts tests/integrations.test.ts tests/release-zip.test.ts tests/mail-html.test.ts tests/page-access.test.ts",
+    "test": "node --experimental-strip-types --test tests/core.test.ts tests/mail-providers.test.ts tests/mail-events.test.ts tests/funnel-line.test.ts tests/page-builder.test.ts tests/integrations.test.ts tests/release-zip.test.ts tests/mail-html.test.ts tests/page-access.test.ts tests/line-messages.test.ts",
     "test:integration": "node tests/standalone-integration.mjs",
     "qa:server": "node tests/qa-server.mjs",
     "test:browser": "node tests/browser-qa.mjs",

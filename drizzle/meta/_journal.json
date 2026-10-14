@@ -64,6 +64,13 @@
       "when": 1791943906394,
       "tag": "0008_funnel_analytics",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1791945239586,
+      "tag": "0009_line_chat",
+      "breakpoints": true
     }
   ]
 }

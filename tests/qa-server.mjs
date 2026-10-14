@@ -16,6 +16,8 @@ const mails=[],lines=[],stripe=[];
 const mf=new Miniflare({cf:false,modules:files.map(f=>({type:'ESModule',path:server+f})),modulesRoot:server,compatibilityDate:'2026-05-15',compatibilityFlags:['nodejs_compat'],d1Databases:['DB'],r2Buckets:['BUCKET'],bindings:{AUTH_MODE:'standalone',WORKSPACE_ID:'store',ADMIN_EMAIL:'admin@example.com',PUBLIC_ORIGIN:origin,SETUP_TOKEN,AUTH_SECRET:'b'.repeat(64),MAIL_TOKEN_SECRET:'c'.repeat(64),RESEND_API_KEY:'test',MAIL_FROM:'Store <store@example.com>',MAIL_ENABLED:'true',COMMERCE_ENABLED:'true',STRIPE_SECRET_KEY:'sk_test_mock',STRIPE_WEBHOOK_SECRET:'whsec_mock',SCHEDULER_SECRET:'scheduler-test',SCHEDULER_OWNER:'store',AUTO_BACKUP_ENABLED:'false',LINE_CHANNEL_ACCESS_TOKEN:'line-test',LINE_CHANNEL_SECRET:LINE_SECRET,LINE_ENABLED:'true'},outboundService:async req=>{
  if(req.url==='https://api.resend.com/emails'){mails.push(await req.json());return Response.json({id:'mail-'+mails.length});}
  if(req.url==='https://api.line.me/v2/bot/message/push'){lines.push(await req.json());return new Response('{}',{headers:{'x-line-request-id':'line-'+lines.length}});}
+ if(req.url==='https://api.line.me/v2/bot/message/reply'){lines.push(await req.json());return Response.json({});}
+ if(/^https:\/\/api(-data)?\.line\.me\/v2\/bot\/richmenu/.test(req.url)||/^https:\/\/api\.line\.me\/v2\/bot\/user\//.test(req.url)){return Response.json(req.url.endsWith('/richmenu')&&req.method==='POST'?{richMenuId:'richmenu-qa'}:{});}
  if(req.url==='https://api.stripe.com/v1/checkout/sessions'){stripe.push(await req.text());return Response.json({id:'cs_test_qa_'+stripe.length,url:origin+'/__qa/stripe-checkout'});}
  return new Response('QA mock: unexpected outbound '+req.url,{status:599});
 }});
