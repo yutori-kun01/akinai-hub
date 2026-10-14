@@ -1,0 +1,21 @@
+'use client';
+import {Plus,Trash2} from 'lucide-react';
+type Item=Record<string,any>;
+// Event settings with dated sessions, and the bookings for each session (cancel and CSV).
+export default function EventEditor({data,field,products,bookings,storeBase,onCancel}:{data:Item;field:(k:string,v:unknown)=>void;products:Item[];bookings:Item[];storeBase:string;onCancel:(id:string)=>void}){
+ const sessions:Item[]=data.sessions||[];const set=(i:number,c:Item)=>field('sessions',sessions.map((s,j)=>j===i?{...s,...c}:s));const active=bookings.filter(b=>b.eventId===data.id&&b.status==='booked');
+ return <>
+  <div className="field-row"><label>URL末尾<input required pattern="[a-z][a-z0-9\-]{2,70}" value={data.slug} onChange={e=>field('slug',e.target.value)}/></label><label>公開状態<select value={data.status} onChange={e=>field('status',e.target.value)}><option value="draft">下書き</option><option value="published">公開</option></select></label></div>
+  {data.id&&data.slug&&<p className="subtle">予約ページ：{storeBase.replace('/shop/','/events/')}{data.slug}</p>}
+  <label>イベント名（ページの見出し）<input required maxLength={200} value={data.headline} onChange={e=>field('headline',e.target.value)}/></label>
+  <label>説明<textarea value={data.body} onChange={e=>field('body',e.target.value)}/></label>
+  <div className="field-row"><label>場所（会場・オンライン等）<input maxLength={500} value={data.location} onChange={e=>field('location',e.target.value)}/></label><label>参加URL（予約者だけに表示・Zoom等）<input value={data.joinUrl} placeholder="https://" onChange={e=>field('joinUrl',e.target.value)}/></label></div>
+  <div className="field-row"><label>予約した人に付けるタグ<input maxLength={40} value={data.signupTag} onChange={e=>field('signupTag',e.target.value)}/><small>タグでステップ配信を始められます。</small></label><label>予約できる人<select value={data.requireProductId} onChange={e=>field('requireProductId',e.target.value)}><option value="">誰でも（メール認証のみ）</option>{products.map(p=><option key={p.id} value={p.id}>「{p.name}」の購入者のみ</option>)}</select></label></div>
+  <label>リマインドメール（開始の何時間前・カンマ区切り、最大3つ）<input value={(data.reminderHours||[]).join(',')} onChange={e=>field('reminderHours',e.target.value.split(/[,、\s]+/).map(Number).filter(n=>Number.isInteger(n)&&n>0).slice(0,3))}/></label>
+  {sessions.map((s,i)=>{const list=active.filter(b=>b.sessionId===s.id);return <fieldset key={s.id}><legend>日程 {i+1}</legend><div className="field-row"><label>開始日時（日本時間）<input type="datetime-local" required value={s.startsAt} onChange={e=>set(i,{startsAt:e.target.value})}/></label><label>時間（分）<input type="number" min="5" max="1440" value={s.minutes} onChange={e=>set(i,{minutes:Number(e.target.value)})}/></label></div><div className="field-row"><label>定員<input type="number" min="1" max="500" value={s.capacity} onChange={e=>set(i,{capacity:Number(e.target.value)})}/></label><label>補足（任意）<input maxLength={200} value={s.note} onChange={e=>set(i,{note:e.target.value})}/></label></div>
+   <div className="ev-booked"><strong>予約 {list.length}/{s.capacity}</strong>{list.map(b=><span key={b.id}>{b.name.split(' / ')[0]}（{b.email}）<button type="button" className="text-btn" onClick={()=>{if(window.confirm(b.email+' の予約をキャンセルしますか？予約者へのリマインドも止まります。'))onCancel(b.id);}}>キャンセル</button></span>)}</div>
+   {!list.length&&sessions.length>1&&<button type="button" className="text-btn" onClick={()=>field('sessions',sessions.filter((_,j)=>j!==i))}><Trash2 size={13}/>この日程を削除</button>}</fieldset>;})}
+  {sessions.length<50&&<button type="button" className="secondary" onClick={()=>field('sessions',[...sessions,{id:'s'+Date.now().toString(36),startsAt:'',minutes:sessions.at(-1)?.minutes||60,capacity:sessions.at(-1)?.capacity||10,note:''}])}><Plus size={15}/>日程を追加</button>}
+  {data.id&&<a className="secondary" href={'/api/hub?export=bookings&event='+encodeURIComponent(data.id)}>予約者をCSV出力</a>}
+  <p className="subtle">予約のある日程は、日時の変更・削除ができません（先に予約をキャンセルしてください）。予約確認とリマインドは取引メールとして送ります。</p>
+ </>;}

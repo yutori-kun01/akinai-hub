@@ -270,6 +270,27 @@ try{
  assert.equal((await request('/api/line/richmenu',{action:'unpublish',id:vip.id},admin.cookie)).status,200);assert.ok(lineApiCalls.some(c=>c.path===`richmenu/${pub.data.richMenuId}`&&c.method==='DELETE'));checks++;
  const lineBackup=await request('/api/backup',{action:'create'},admin.cookie);const lineSnap=(await request('/api/backup?key='+encodeURIComponent(lineBackup.data.key),undefined,admin.cookie)).data;assert.ok(lineSnap.lineMessages.length>=6);assert.ok(lineSnap.lineMessages.every(m=>m.reply_token===null));assert.ok(lineSnap.files.some(f=>f.key.endsWith(img.split('image=')[1])));checks++;
  }
+
+ {// Event booking: seats, double booking, join URL only for bookers, reminders withdrawn on cancel, locked session times
+ const otp=async email=>{const r=await request('/api/auth/request-code',{email});assert.equal(r.status,200,JSON.stringify(r.data));const code=deliveries.at(-1).text.match(/\d{6}/)[0];const u=await request('/api/auth/verify-code',{email,challenge:r.data.challenge,code});assert.equal(u.status,200);return u.cookie;};
+ const day=new Date(Date.now()+3*86400000+9*3600000).toISOString().slice(0,16);const past=new Date(Date.now()-86400000+9*3600000).toISOString().slice(0,16);
+ const ev=await save('events',{name:'Seminar',slug:'qa-seminar',headline:'QAセミナー',body:'説明',location:'オンライン',joinUrl:'https://zoom.test/j/1',status:'published',signupTag:'seminar',reminderHours:[24,1],sessions:[{id:'s1',startsAt:day,minutes:60,capacity:1},{id:'s0',startsAt:past,minutes:60,capacity:5}]},admin.cookie);
+ const a=await otp('event-a@example.com'),b=await otp('event-b@example.com');
+ assert.doesNotMatch((await request('/events/store/qa-seminar',undefined,a)).data,/zoom\.test/);
+ let r=await request('/api/events',{action:'book',owner:'store',eventId:ev.id,sessionId:'s0',name:'A'},a);assert.equal(r.status,400);assert.match(r.data.error,/終了/);
+ r=await request('/api/events',{action:'book',owner:'store',eventId:ev.id,sessionId:'s1',name:'A'},a);assert.equal(r.status,200,JSON.stringify(r.data));const bookingId=r.data.id;
+ r=await request('/api/events',{action:'book',owner:'store',eventId:ev.id,sessionId:'s1',name:'A'},a);assert.equal(r.status,400);assert.match(r.data.error,/予約済み/);
+ r=await request('/api/events',{action:'book',owner:'store',eventId:ev.id,sessionId:'s1',name:'B'},b);assert.equal(r.status,400);assert.match(r.data.error,/満席/);
+ assert.match((await request('/events/store/qa-seminar',undefined,a)).data,/zoom\.test/);assert.doesNotMatch((await request('/events/store/qa-seminar',undefined,b)).data,/zoom\.test/);
+ const jobs=(await db.prepare('SELECT id,status,due FROM jobs WHERE campaign_id=? ORDER BY id').bind(bookingId).all()).results;assert.deepEqual(jobs.map(j=>j.id.split(':')[0]+':'+(j.id.split(':')[2]||'')),['booking:','remind:1','remind:24']);
+ const contact=(await request('/api/hub',undefined,admin.cookie)).data.records.find(x=>x.kind==='contacts'&&x.email==='event-a@example.com');assert.ok(contact.tags.includes('seminar'));
+ const cal=await request('/api/events?owner=store&booking='+bookingId,undefined,a);assert.equal(cal.status,200);assert.match(cal.data,/BEGIN:VEVENT/);assert.equal((await request('/api/events?owner=store&booking='+bookingId,undefined,b)).status,400);
+ const evNow=(await request('/api/hub',undefined,admin.cookie)).data.records.find(x=>x.id===ev.id);assert.equal((await request('/api/hub',{action:'save',kind:'events',id:ev.id,version:evNow.version,data:{...evNow,sessions:evNow.sessions.map(x=>x.id==='s1'?{...x,startsAt:past}:x)}},admin.cookie)).status,400);
+ assert.equal((await request('/api/hub',{action:'save',kind:'bookings',data:{name:'x',eventId:ev.id,sessionId:'s1',contactId:'c',email:'x@example.com',status:'booked',seat:0}},admin.cookie)).status,400);
+ assert.equal((await request('/api/events',{action:'cancel',owner:'store',bookingId},b)).status,400);
+ r=await request('/api/events',{action:'cancel',owner:'store',bookingId},a);assert.equal(r.status,200,JSON.stringify(r.data));assert.deepEqual((await db.prepare("SELECT DISTINCT status FROM jobs WHERE campaign_id=? AND id LIKE 'remind:%'").bind(bookingId).all()).results.map(x=>x.status),['cancelled']);
+ r=await request('/api/events',{action:'book',owner:'store',eventId:ev.id,sessionId:'s1',name:'B'},b);assert.equal(r.status,200,JSON.stringify(r.data));
+ assert.equal((await request('/api/hub',{action:'cancel-booking',id:r.data.id},admin.cookie)).status,200);const csv=(await request('/api/hub?export=bookings&event='+ev.id,undefined,admin.cookie)).data;assert.match(csv,/"canceled"/);checks++;}
  const out=await request('/api/auth/logout',{},buyer.cookie);assert.equal(out.status,200);assert.equal((await request('/api/customer-download?order='+bankKey,undefined,buyer.cookie)).status,401);checks++;
  console.log('PASS '+checks+' standalone integration checks; mock provider requests only.');
 }finally{await mf.dispose();}
