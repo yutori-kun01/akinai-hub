@@ -42,3 +42,24 @@ records の新しい種類：`richMenus` `lineAutoReplies` `events` `bookings` `
 - LINE実アカウント（リッチメニュー公開・チャット・Flex表示）、実メール到達、Stripeテストモード、Zoom等の参加URLの実運用は未確認。
 - LINEの料金（応答メッセージは通数に含まれない等）は公式の最新情報で確認すること。
 - 未実装のUTAGE機能：セクション/行の多段レイアウト（現状は全幅＋2列）、画像ボタン・アイコン、動画メニュー（段階公開）、コメント、自動ウェビナーの再生時間連動表示、メールA/Bの勝ちパターン自動配信、イベントの会議URL自動発行・有料イベント、パートナーのグループ・多段報酬、ファネルのテンプレート共有（JSON入出力）。
+
+## 第3回の続き（「残りも続けて実装して」）
+
+| 内容 | 主なファイル |
+| --- | --- |
+| セクション（背景色・背景画像・余白の帯）、1/2・1/3・2/3列、スマホ別の文字サイズ | app/page-blocks.tsx、app/block-fields.tsx |
+| 画像ボタン・アイコン付きボタン、画像のリンク先、本文の太字・下線・リンク | lib/page-schema.ts |
+| 動画メニュー（日付／初回表示N日後に順次公開）、自動ウェビナーの再生N分後に要素を表示 | app/page-blocks.tsx |
+| ページのコメント（承認制）と管理画面の承認 | app/api/comments、app/comment-panel.tsx |
+| 画像ライブラリ（アップロード済みから選ぶ・未使用画像の削除） | app/api/assets/library、app/image-library.tsx |
+| メールA/B：一部で試して勝ちパターンを残りへ自動配信 | lib/automation.ts |
+| メール本文の出し分け（タグ・フォーム回答）、`{{field:キー}}` 差し込み、クリックでタグ解除 | lib/mail-html.ts、lib/tracking.ts |
+| 登録日時からのカウントダウン | app/shop/[owner]/[slug]/page.tsx |
+| イベント：Zoom会議の自動作成、日程ごとの参加URL、有料イベントの案内 | lib/zoom.ts |
+| パートナー：商品別報酬、2段目報酬 | lib/partners.ts |
+| ファネルのJSON書き出し・読み込み | lib/funnel-map.ts |
+| LINEの動画・音声メッセージ | lib/line-messages.ts |
+
+DB追加SQLなし（records のJSON項目追加のみ、既定値つき）。検証：型検査、単体64、統合96、ブラウザQA 30 すべて成功（外部はモック。Zoom・LINE・メール・Stripeの実接続は未確認）。
+
+まだ無いもの：1商品に複数価格、Stripe以外の決済代行、LINEログイン連携、行のネスト・自由配置、配信基準のカウントダウン、イベントのカレンダーAPI連携・キャンセル待ち、パートナーの案件・グループ管理、ページ内へのイベント予約フォーム埋め込み。
