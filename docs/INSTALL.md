@@ -1,6 +1,6 @@
 # Akinai hub 独立版 — 導入マニュアル
 
-対象: 1.0.0-rc.2（リリース候補）。1つのCloudflare環境に1店舗・1管理者。ChatGPTアカウントは不要です。
+対象: 1.0.0-rc.3（リリース候補）。1つのCloudflare環境に1店舗・1管理者。ChatGPTアカウントは不要です。
 
 この配布版はソースコードを自分のCloudflareへ設置する方式です。Node.js 22.13以上、pnpm 11.25.0、ターミナル操作、Cloudflareアカウント、送信元ドメインが必要です。外部サービスの料金は別途です。無料枠内の運用を保証しません。特に認証の暗号処理・定期処理・保存容量の上限を確認してください。
 
@@ -16,6 +16,20 @@ pnpm exec wrangler login
 ```
 
 pnpm 11の設定（overrides と、esbuild・workerd などビルドスクリプトの許可）は同梱の pnpm-workspace.yaml にあります。この許可がないと `--frozen-lockfile` が失敗します（2026-10-14修正）。ZIPには秘密情報・実顧客データ・既存店舗IDを含めません。
+
+## 1-2. 本番の前にローカルで予行演習する（任意）
+
+Cloudflareに作る前に、同じ手順を手元で一度通せます。実際のD1・R2・課金は使いません。
+
+```sh
+cp wrangler.standalone.example.json wrangler.standalone.json   # 予行演習用。本番では次節のウィザードで作り直す
+pnpm exec wrangler d1 migrations apply DB --local --config wrangler.standalone.json
+pnpm run build:standalone
+printf 'SETUP_TOKEN=<32文字以上の乱数>\nAUTH_SECRET=<別の乱数>\nMAIL_TOKEN_SECRET=<別の乱数>\n' > dist/server/.dev.vars
+pnpm exec wrangler dev --config dist/server/wrangler.json --port 8788 --var PUBLIC_ORIGIN:http://localhost:8788
+```
+
+`http://localhost:8788/setup` で管理者を作成し、ダッシュボードが開けば成功です。`dist/server/.dev.vars` と予行演習用の `wrangler.standalone.json` は本番用に流用せず削除してください（`.dev.vars` は秘密情報なのでコミットしない）。`pnpm exec wrangler deploy --config dist/server/wrangler.json --dry-run` で、アップロード容量と接続されるD1・R2の名前も事前に確認できます。
 
 ## 2. D1とR2を作る
 
