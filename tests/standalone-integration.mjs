@@ -1,9 +1,9 @@
-import {createRequire} from 'node:module';
+import {createRequire} from 'node:module';import {fileURLToPath} from 'node:url';
 import {readFile,readdir} from 'node:fs/promises';
 import {createHmac} from 'node:crypto';
 import assert from 'node:assert/strict';
 const require=createRequire(import.meta.url);const {Miniflare,Log,LogLevel}=createRequire(require.resolve('wrangler/package.json'))('miniflare');
-const root=new URL('../dist/server/',import.meta.url).pathname;const files=(await readdir(root,{recursive:true})).filter(f=>/\.m?js$/.test(f));files.sort((a,b)=>a==='index.js'?-1:b==='index.js'?1:a.localeCompare(b));
+const root=fileURLToPath(new URL('../dist/server/',import.meta.url));const files=(await readdir(root,{recursive:true})).filter(f=>/\.m?js$/.test(f));files.sort((a,b)=>a==='index.js'?-1:b==='index.js'?1:a.localeCompare(b));
 const deliveries=[];const lineDeliveries=[];let stripeCount=0;let checks=0;
 const mf=new Miniflare({cf:false,modules:files.map(f=>({type:'ESModule',path:root+f})),modulesRoot:root,compatibilityDate:'2026-05-15',compatibilityFlags:['nodejs_compat'],d1Databases:['DB'],r2Buckets:['BUCKET'],bindings:{AUTH_MODE:'standalone',WORKSPACE_ID:'store',ADMIN_EMAIL:'admin@example.com',PUBLIC_ORIGIN:'https://store.test',SETUP_TOKEN:'a'.repeat(64),AUTH_SECRET:'b'.repeat(64),MAIL_TOKEN_SECRET:'c'.repeat(64),RESEND_API_KEY:'test',MAIL_FROM:'Store <store@example.com>',MAIL_ENABLED:'true',COMMERCE_ENABLED:'true',STRIPE_SECRET_KEY:'sk_test_mock',STRIPE_WEBHOOK_SECRET:'whsec_mock',BREVO_WEBHOOK_TOKEN:'webhook-test',SCHEDULER_SECRET:'scheduler-test',SCHEDULER_OWNER:'store',AUTO_BACKUP_ENABLED:'true',LINE_CHANNEL_ACCESS_TOKEN:'line-test',LINE_CHANNEL_SECRET:'line-secret',LINE_ENABLED:'true'},outboundService:async req=>{
  if(req.url==='https://api.line.me/v2/bot/message/push'){lineDeliveries.push({body:await req.json(),retry:req.headers.get('x-line-retry-key')});return new Response('{}',{headers:{'x-line-request-id':'line-'+lineDeliveries.length}});}
