@@ -1,10 +1,10 @@
-import {createRequire} from 'node:module';
+import {createRequire} from 'node:module';import {fileURLToPath} from 'node:url';
 import {readFile,readdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const require=createRequire(import.meta.url);
 const wranglerRequire=createRequire(require.resolve('wrangler/package.json'));
 const {Miniflare}=wranglerRequire('miniflare');
-const root=new URL('../dist/server/',import.meta.url).pathname;const moduleFiles=(await readdir(root,{recursive:true})).filter(f=>/\.m?js$/.test(f));moduleFiles.sort((a,b)=>a==='index.js'?-1:b==='index.js'?1:a.localeCompare(b));
+const root=fileURLToPath(new URL('../dist/server/',import.meta.url));const moduleFiles=(await readdir(root,{recursive:true})).filter(f=>/\.m?js$/.test(f));moduleFiles.sort((a,b)=>a==='index.js'?-1:b==='index.js'?1:a.localeCompare(b));
 const mf=new Miniflare({modules:moduleFiles.map(f=>({type:'ESModule',path:root+f})),modulesRoot:root,compatibilityDate:'2026-05-15',compatibilityFlags:['nodejs_compat'],d1Databases:['DB'],r2Buckets:['BUCKET']});
 let checks=0;
 try{

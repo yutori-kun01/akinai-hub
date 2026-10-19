@@ -2,14 +2,14 @@
 // with D1/R2 and mocked mail/LINE/Stripe APIs, serves dist/client, and exposes /__qa/* helpers.
 // Usage: pnpm run build:standalone && node tests/qa-server.mjs [port]
 // Never point this at real provider keys; every outbound request is answered by the mocks below.
-import {createRequire} from 'node:module';
+import {createRequire} from 'node:module';import {fileURLToPath} from 'node:url';
 import {createServer} from 'node:http';
 import {readFile,readdir,stat} from 'node:fs/promises';
 import {createHmac} from 'node:crypto';
 import {extname,join,normalize} from 'node:path';
 const require=createRequire(import.meta.url);const {Miniflare}=createRequire(require.resolve('wrangler/package.json'))('miniflare');
 const port=Number(process.argv[2]||process.env.QA_PORT||8787),origin='http://localhost:'+port;
-const server=new URL('../dist/server/',import.meta.url).pathname,client=new URL('../dist/client/',import.meta.url).pathname;
+const server=fileURLToPath(new URL('../dist/server/',import.meta.url)),client=fileURLToPath(new URL('../dist/client/',import.meta.url));
 const files=(await readdir(server,{recursive:true})).filter(f=>/\.m?js$/.test(f));files.sort((a,b)=>a==='index.js'?-1:b==='index.js'?1:a.localeCompare(b));
 export const SETUP_TOKEN='a'.repeat(64),LINE_SECRET='line-secret';
 const mails=[],lines=[],stripe=[];
